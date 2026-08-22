@@ -712,13 +712,9 @@ textarea{resize:vertical;}
     </div>
 
     <div class="card">
-      <h2>✨ 一键拆分 <span class="hint">AI 把任务拆成可执行的步</span></h2>
-      <label>任务本身（要达成什么）</label>
-      <textarea id="ltTitle" rows="2" placeholder="例：三个月拿下转专业资格 / 这学期雅思 6.5"></textarea>
-      <label>想怎么拆（给 AI 的提示，可留空走通用拆分）</label>
-      <textarea id="ltHint" rows="2" placeholder="例：按周拆 / 先查政策再审材料 / 每天抽 1 小时"></textarea>
-      <button class="btn" id="ltSplit" style="margin:8px 0">✨ 用 AI 拆分并填入任务栏</button>
-      <div class="muted">注：本版先用本地规则拆分；真正智能拆解（按你写的提示自由拆）可后续接入 AI（需要 token）。</div>
+      <h2>🚀 打开 PlanCoach <span class="hint">跳去手机上的拆分 App</span></h2>
+      <button class="btn big" id="planCoachBtn" data-pc="">🚀 点我打开 PlanCoach</button>
+      <div class="muted">本来「一键拆分」在网页里，现在直接拉起你手机上的 PlanCoach，让它来拆。</div>
     </div>
 
     <div class="card">
@@ -880,7 +876,9 @@ function buildSidebar(){
     }
     big.addEventListener('click',function(ev){
       if(ev&&ev.preventDefault) ev.preventDefault();
-      item.classList.toggle('open');
+      if(btn) btn.click();
+      document.querySelectorAll('.sb-item').forEach(function(it){ if(it!==item) it.classList.remove('open'); });
+      item.classList.add('open');
     });
     item.appendChild(big); item.appendChild(subWrap);
     if(firstItem){ item.classList.add('open'); firstItem=false; }
@@ -1899,7 +1897,7 @@ function renderLong(){
       +(t.hint?'<div class="muted" style="font-size:12px">拆法：'+esc(t.hint)+'</div>':'')
       +'</div><span class="del" data-id="'+t.id+'">✕</span></div>';
   });
-  $('longList').innerHTML=html||'<div class="muted">还没有长期任务。下面用「一键拆分」生成。</div>';
+  $('longList').innerHTML=html||'<div class="muted">还没有长期任务，点上面「🚀 打开 PlanCoach」拆一个回来。</div>';
   $('longList').querySelectorAll('.del').forEach(function(x){
     x.addEventListener('click',function(){var a=getLong();a=a.filter(function(t){return t.id!=x.dataset.id;});lsSet('adhd_longtasks',a);renderLong();});
   });
@@ -1910,7 +1908,7 @@ function renderShort(){
   list.forEach(function(t){
     html+='<div class="todo'+(t.done?' done':'')+'" data-id="'+t.id+'"><span class="box">'+(t.done?'✓':'')+'</span><span class="tx">'+esc(t.text)+'</span><span class="del" data-id="'+t.id+'">✕</span></div>';
   });
-  $('shortList').innerHTML=html||'<div class="muted">没有短期任务，去上面「一键拆分」生成一个吧。</div>';
+  $('shortList').innerHTML=html||'<div class="muted">没有短期任务，去「🚀 打开 PlanCoach」或上面直接加一件。</div>';
   $('shortList').querySelectorAll('.box').forEach(function(b){
     b.addEventListener('click',function(){var a=getShort();var t=a.find(function(x){return x.id==b.parentElement.dataset.id;});if(t){t.done=!t.done;lsSet('adhd_shorttasks',a);renderShort();}});
   });
@@ -1918,27 +1916,6 @@ function renderShort(){
     d.addEventListener('click',function(){var a=getShort();a=a.filter(function(x){return x.id!=d.dataset.id;});lsSet('adhd_shorttasks',a);renderShort();});
   });
 }
-/* 拆分规则：有「怎么拆」提示就按提示里的条目拆；否则给通用四步（后续可换成真 AI） */
-function smartSplit(title,hint){
-  if(hint){
-    var parts=hint.split(/[\n、，；;/\/]+/).map(function(s){return s.trim();}).filter(Boolean);
-    if(parts.length>1){return parts.map(function(p){return title+'：'+p;});}
-  }
-  return ['先搞清楚「'+title+'」到底要什么','列出需要的材料和清单','定一个最小的起步动作，现在就做','做完一步，奖励自己一下'];
-}
-$('ltSplit').addEventListener('click',function(){
-  var title=$('ltTitle').value.trim(),hint=$('ltHint').value.trim();
-  if(!title){$('ltTitle').focus();return;}
-  var id='L'+Date.now();
-  var a=getLong();a.push({id:id,title:title,hint:hint});lsSet('adhd_longtasks',a);
-  var steps=smartSplit(title,hint);
-  var sh=getShort();
-  steps.forEach(function(s){sh.push({id:'S'+Date.now()+Math.random().toString(36).slice(2,6),text:s,done:false});});
-  lsSet('adhd_shorttasks',sh);
-  $('ltTitle').value='';$('ltHint').value='';
-  renderLong();renderShort();
-  kakaSay('已把「'+title+'」拆成 '+steps.length+' 步，填到下面短期任务了。');
-});
 $('shortAdd').addEventListener('click',function(){
   var v=$('shortInput').value.trim();if(!v)return;
   var a=getShort();a.push({id:'S'+Date.now(),text:v,done:false});lsSet('adhd_shorttasks',a);
@@ -1968,6 +1945,7 @@ $('wkSave').addEventListener('click',function(){
 loadWx();renderPeri();renderHabits();pomoShow();renderAffirms();renderDiary();
 renderCourse();renderTodos();renderIdle();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderIdeas();renderKaka();
 renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();
+var pcb=$('planCoachBtn'); if(pcb){pcb.addEventListener('click',function(){var u=pcb.dataset.pc; if(u&&u.indexOf('__')!==0&&u.trim()){window.open(u,'_blank');}else{alert('这个按钮还没填 PlanCoach 的打开链接，跟妮妮说一声就给你填上。');}});}
 applyWallpaper();renderLong();renderShort();renderWeeklyReview();
 </script>
 <div id="overlay" class="overlay"></div>

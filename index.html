@@ -333,7 +333,7 @@ textarea{resize:vertical;}
 /* 隐藏原平铺标签栏（改用侧栏） */
 .tabs{display:none;}
 /* ===== 侧栏 ===== */
-.sidebar{position:fixed;top:0;left:0;height:100%;width:80vw;max-width:300px;background:var(--card);box-shadow:6px 0 30px rgba(20,30,50,.18);transform:translateX(-106%);transition:transform .25s ease;z-index:60;display:flex;flex-direction:column;}
+.sidebar{position:fixed;top:0;left:0;height:100%;width:80vw;max-width:300px;background:var(--card);box-shadow:6px 0 30px rgba(20,30,50,.18);transform:translateX(-106%);transition:transform .25s ease;z-index:65;display:flex;flex-direction:column;}
 .sidebar.open{transform:translateX(0);}
 .sb-head{display:flex;align-items:center;justify-content:space-between;padding:16px 14px 10px;font-size:17px;font-weight:700;color:var(--ink);border-bottom:1px solid var(--line);}
 .sb-close{border:none;background:transparent;color:var(--sub);font-size:20px;cursor:pointer;width:36px;height:36px;border-radius:10px;flex:0 0 auto;}
@@ -356,6 +356,13 @@ textarea{resize:vertical;}
 /* 从侧栏跳到卡片时的高亮 */
 .card.flash{outline:3px solid var(--brand);animation:flashpulse 1.1s ease;}
 @keyframes flashpulse{0%,100%{outline-color:var(--brand);}50%{outline-color:transparent;}}
+/* 顶栏工具下拉菜单（壁纸等） */
+.tool-group{position:relative;display:inline-block;}
+.tool-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(20,30,50,.18);padding:6px;min-width:130px;z-index:90;flex-direction:column;gap:4px;}
+.tool-menu.open{display:flex;}
+.tool-menu button{display:block;width:100%;border:none;background:transparent;color:var(--ink);font-size:13px;padding:9px 10px;border-radius:8px;cursor:pointer;text-align:left;white-space:nowrap;}
+.tool-menu button:active,.tool-menu button:hover{background:var(--bg);}
+.wall-file{position:absolute;left:-9999px;opacity:0;width:1px;height:1px;}
 </style>
 </head>
 <body>
@@ -366,9 +373,14 @@ textarea{resize:vertical;}
         <button id="backupBtn">备份数据</button>
         <button id="restoreBtn">恢复数据</button>
         <input type="file" id="restoreFile" accept="application/json,.json" style="display:none">
-        <button id="wallBtn">🖼️壁纸</button>
-        <input type="file" id="wallFile" accept="image/*" style="display:none">
-        <button id="wallReset">↺还原壁纸</button>
+        <span class="tool-group">
+          <button id="wallMenuBtn">🖼️壁纸 ▾</button>
+          <span id="wallMenu" class="tool-menu">
+            <button id="wallChooseBtn">📤 更换壁纸</button>
+            <input type="file" id="wallFile" accept="image/*" class="wall-file">
+            <button id="wallResetBtn">↺ 还原壁纸</button>
+          </span>
+        </span>
         <button id="themeBtn">换肤 ▾</button>
       </span>
     </h1>
@@ -901,13 +913,15 @@ function gotoSub(key,idx){
 function openSidebar(){var s=document.getElementById('sidebar');var o=document.getElementById('overlay');if(s)s.classList.add('open');if(o)o.classList.add('open');}
 function closeSidebar(){var s=document.getElementById('sidebar');var o=document.getElementById('overlay');if(s)s.classList.remove('open');if(o)o.classList.remove('open');}
 function toggleSidebar(){var s=document.getElementById('sidebar');if(!s)return;if(s.classList.contains('open'))closeSidebar();else openSidebar();}
-function syncSidebarTop(){var tb=document.querySelector('.topbar');var sb=document.getElementById('sidebar');if(tb&&sb)sb.style.top=tb.offsetHeight+'px';}
-var mb=document.getElementById('menuBtn'); if(mb) mb.addEventListener('click',toggleSidebar);
-var ov=document.getElementById('overlay'); if(ov) ov.addEventListener('click',closeSidebar);
-var sc=document.getElementById('sbClose'); if(sc) sc.addEventListener('click',closeSidebar);
+function syncSidebarTop(){var tb=document.querySelector('.topbar');var sb=document.getElementById('sidebar');if(tb&&sb){sb.style.top=tb.offsetHeight+'px';sb.style.height='calc(100% - '+tb.offsetHeight+'px)';}}
+function initSidebar(){
+  var mb=document.getElementById('menuBtn'); if(mb) mb.addEventListener('click',toggleSidebar);
+  var ov=document.getElementById('overlay'); if(ov) ov.addEventListener('click',closeSidebar);
+  var sc=document.getElementById('sbClose'); if(sc) sc.addEventListener('click',closeSidebar);
+  buildSidebar(); syncSidebarTop();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initSidebar); else initSidebar();
 if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('resize',syncSidebarTop);
-buildSidebar();
-syncSidebarTop();
 
 /* 皮肤 */
 var THEMES=['light','peach','dark','lace','kitty'];
@@ -928,9 +942,12 @@ function applyWallpaper(){
   if(d){document.body.style.backgroundImage='url('+d+')';document.body.style.backgroundSize='cover';document.body.style.backgroundPosition='center';document.body.style.backgroundAttachment='fixed';}
   else{document.body.style.backgroundImage='';document.body.style.backgroundSize='';document.body.style.backgroundPosition='';document.body.style.backgroundAttachment='';}
 }
-$('wallBtn').addEventListener('click',function(){ $('wallFile').click(); });
-$('wallFile').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){localStorage.setItem(wpKey(),r.result);applyWallpaper();};r.readAsDataURL(f);});
-$('wallReset').addEventListener('click',function(){localStorage.removeItem(wpKey());applyWallpaper();alert('已还原「'+THEME_NAME[document.documentElement.dataset.theme]+'」的壁纸');});
+function toggleWallMenu(show){var m=$('wallMenu'); if(!m)return; if(show===true)m.classList.add('open'); else if(show===false)m.classList.remove('open'); else m.classList.toggle('open');}
+$('wallMenuBtn').addEventListener('click',function(ev){ev.stopPropagation();toggleWallMenu();});
+$('wallChooseBtn').addEventListener('click',function(ev){ev.stopPropagation();$('wallFile').click();});
+$('wallFile').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{localStorage.setItem(wpKey(),r.result);applyWallpaper();alert('壁纸已保存到「'+THEME_NAME[document.documentElement.dataset.theme]+'」');}catch(err){alert('保存壁纸失败：图片太大或浏览器存储已满，换张小图试试。');} e.target.value='';};r.readAsDataURL(f);});
+$('wallResetBtn').addEventListener('click',function(ev){ev.stopPropagation();localStorage.removeItem(wpKey());applyWallpaper();alert('已还原「'+THEME_NAME[document.documentElement.dataset.theme]+'」的壁纸');toggleWallMenu(false);});
+document.addEventListener('click',function(ev){var m=$('wallMenu'); if(m&&m.classList.contains('open')&&!m.contains(ev.target)&&ev.target.id!=='wallMenuBtn')m.classList.remove('open');});
 
 /* ============ 备份 / 恢复（解决“换个方式打开数据就没了”） ============ */
 /* 本地 HTML 文件的数据存在“当时打开它的浏览器+文件路径”下，换手机/微信/换电脑会读不到。

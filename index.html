@@ -363,6 +363,29 @@ textarea{resize:vertical;}
 .tool-menu button{display:block;width:100%;border:none;background:transparent;color:var(--ink);font-size:13px;padding:9px 10px;border-radius:8px;cursor:pointer;text-align:left;white-space:nowrap;}
 .tool-menu button:active,.tool-menu button:hover{background:var(--bg);}
 .wall-file{position:absolute;left:-9999px;opacity:0;width:1px;height:1px;}
+/* 磨砂玻璃质感（全局） */
+body{position:relative;background:var(--bg);}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(42vw 42vw at 10% 14%, rgba(123,162,255,.30), transparent 70%),
+    radial-gradient(38vw 38vw at 90% 10%, rgba(255,143,163,.26), transparent 70%),
+    radial-gradient(48vw 48vw at 82% 88%, rgba(123,92,255,.20), transparent 70%),
+    radial-gradient(40vw 40vw at 14% 86%, rgba(67,201,138,.16), transparent 70%);
+  filter:blur(46px) saturate(.82);opacity:.95;}
+.topbar{background:rgba(247,248,250,.72);backdrop-filter:blur(12px) saturate(1.05);-webkit-backdrop-filter:blur(12px) saturate(1.05);}
+.card{background:rgba(255,255,255,.58);backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);border:1px solid rgba(255,255,255,.65);box-shadow:0 10px 34px rgba(30,40,60,.10);}
+[data-theme="dark"] .topbar{background:rgba(22,24,29,.72);}
+[data-theme="dark"] .card{background:rgba(42,46,56,.55);border-color:rgba(255,255,255,.10);box-shadow:0 10px 34px rgba(0,0,0,.35);}
+[data-theme="lace"] .topbar{background:rgba(255,255,255,.7);}
+[data-theme="lace"] .card{background:rgba(255,250,252,.66);}
+[data-theme="peach"] .card{background:rgba(255,250,248,.62);}
+input,textarea,select{background:rgba(255,255,255,.5);}
+[data-theme="dark"] input,[data-theme="dark"] textarea,[data-theme="dark"] select{background:rgba(255,255,255,.06);}
+.tool-menu{background:rgba(255,255,255,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+[data-theme="dark"] .tool-menu{background:rgba(42,46,56,.85);}
+.ai-set{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;}
+.ai-set summary{cursor:pointer;font-size:13.5px;color:var(--brand);padding:4px 0;}
+.ai-set label{margin-top:8px;}
 </style>
 </head>
 <body>
@@ -724,9 +747,23 @@ textarea{resize:vertical;}
     </div>
 
     <div class="card">
-      <h2>🚀 打开 PlanCoach <span class="hint">跳去手机上的拆分 App</span></h2>
-      <button class="btn big" id="planCoachBtn" data-pc="">🚀 点我打开 PlanCoach</button>
-      <div class="muted">本来「一键拆分」在网页里，现在直接拉起你手机上的 PlanCoach，让它来拆。</div>
+      <h2>✨ AI 拆分长期目标 <span class="hint">填好接口直接拆</span></h2>
+      <label>长期目标（要达成什么）</label>
+      <textarea id="ltTitle" rows="2" placeholder="例：三个月拿下转专业资格 / 这学期雅思 6.5"></textarea>
+      <label>想怎么拆（给 AI 的提示，可留空走通用拆分）</label>
+      <textarea id="ltHint" rows="2" placeholder="例：按周拆 / 先查政策再审材料 / 每天抽 1 小时"></textarea>
+      <button class="btn" id="ltSplit" style="margin:8px 0">✨ 让 AI 拆成小步</button>
+      <details class="ai-set">
+        <summary>⚙️ API 设置（填一次，存在本机）</summary>
+        <label>接口地址（Base URL，结尾不用加 /v1）</label>
+        <input id="aiBase" placeholder="https://api.openai.com/v1">
+        <label>API Key</label>
+        <input id="aiKey" type="password" placeholder="sk-... 或平台给的密钥">
+        <label>模型名</label>
+        <input id="aiModel" placeholder="gpt-4o-mini">
+        <button class="btn sm" id="aiSave" style="margin-top:6px">保存设置</button>
+        <div class="muted">Key 只存在你浏览器本地，不会上传到别处。没有 Key 就无法拆。</div>
+      </details>
     </div>
 
     <div class="card">
@@ -1958,12 +1995,53 @@ $('wkSave').addEventListener('click',function(){
   lsSet('adhd_weekly',arr);renderWeeklyReview();
 });
 
+/* ============ AI 拆分长期目标 ============ */
+function getAI(){return lsGet('adhd_ai_cfg')||null;}
+function setAI(o){lsSet('adhd_ai_cfg',o);}
+function loadAICfg(){var c=getAI();if(!c)return;if(c.base)$('aiBase').value=c.base;if(c.key)$('aiKey').value=c.key;if(c.model)$('aiModel').value=c.model;}
+$('aiSave').addEventListener('click',function(){setAI({base:$('aiBase').value.trim(),key:$('aiKey').value.trim(),model:$('aiModel').value.trim()});alert('已保存 API 设置（只存在你本机）');});
+async function aiSplit(title,hint){
+  var cfg=getAI();
+  if(!cfg||!cfg.key){alert('先点开「⚙️ API 设置」填好接口地址和 Key');return null;}
+  var sys='你是一个帮 ADHD 用户把大目标拆成极简可执行步骤的助手。只输出一个 JSON 数组，每个元素是一句极短的动作（不超过 15 个汉字），不要编号、不要解释、不要 markdown。';
+  var user='请把这个目标拆成 4 到 8 个不可能失败的小步：'+title+(hint?('\n拆分要求：'+hint):'');
+  var url=(cfg.base||'https://api.openai.com/v1').replace(/\/+$/,'')+'/chat/completions';
+  var body={model:cfg.model||'gpt-4o-mini',messages:[{role:'system',content:sys},{role:'user',content:user}],temperature:0.6};
+  var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify(body)});
+  if(!r.ok){var t=await r.text();throw new Error('接口返回 '+r.status+' '+t.slice(0,120));}
+  var j=await r.json();
+  var content=j.choices&&j.choices[0]&&j.choices[0].message?j.choices[0].message.content:'';
+  var m=content.match(/\[[\s\S]*\]/);
+  var steps=null;
+  if(m){try{steps=JSON.parse(m[0]);}catch(e){steps=null;}}
+  if(!steps||!Array.isArray(steps)||!steps.length){
+    steps=content.split(/\n+/).map(function(s){return s.replace(/^[\d.\-\*、\s]+/,'').replace(/[`*]/g,'').trim();}).filter(Boolean);
+  }
+  return steps;
+}
+$('ltSplit').addEventListener('click',async function(){
+  var title=$('ltTitle').value.trim(),hint=$('ltHint').value.trim();
+  if(!title){$('ltTitle').focus();return;}
+  var a=getLong();a.push({id:'L'+Date.now(),title:title,hint:hint});lsSet('adhd_longtasks',a);renderLong();
+  var btn=$('ltSplit');btn.disabled=true;btn.textContent='AI 拆分中…';
+  try{
+    var steps=await aiSplit(title,hint);
+    if(steps&&steps.length){
+      var sh=getShort();
+      steps.forEach(function(s){sh.push({id:'S'+Date.now()+Math.random().toString(36).slice(2,6),text:String(s).trim(),done:false});});
+      lsSet('adhd_shorttasks',sh);renderShort();
+      kakaSay('已用 AI 把「'+title+'」拆成 '+steps.length+' 步，填到短期任务了。');
+    } else { alert('AI 返回为空，换个说法再试，或检查接口设置。'); }
+  }catch(e){ alert('拆分失败：'+e.message); }
+  btn.disabled=false;btn.textContent='✨ 让 AI 拆成小步';
+});
+
 /* ============ 初始化（放在末尾：所有数据常量与函数均已就绪） ============ */
 loadWx();renderPeri();renderHabits();pomoShow();renderAffirms();renderDiary();
 renderCourse();renderTodos();renderIdle();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderIdeas();renderKaka();
 renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();
 var pcb=$('planCoachBtn'); if(pcb){pcb.addEventListener('click',function(){var u=pcb.dataset.pc; if(u&&u.indexOf('__')!==0&&u.trim()){window.open(u,'_blank');}else{alert('这个按钮还没填 PlanCoach 的打开链接，跟妮妮说一声就给你填上。');}});}
-applyWallpaper();renderLong();renderShort();renderWeeklyReview();
+applyWallpaper();loadAICfg();renderLong();renderShort();renderWeeklyReview();
 </script>
 <div id="overlay" class="overlay"></div>
 <aside id="sidebar" class="sidebar">

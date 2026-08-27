@@ -25,11 +25,13 @@
   --brand:#eaa6c0; --brand2:#f6d8e4; --ok:#8fbfa0; --warn:#d9bd8a; --bad:#e59aa9;
   --shadow:0 4px 18px rgba(200,140,170,.12);
 }
-[data-theme="lace"] body{
+[data-theme="lace"] body{background:transparent;}
+[data-theme="lace"] body::before{
   background-color:#f7f1ea;
   background-image:radial-gradient(circle, #ffffff 16px, transparent 17px);
   background-size:48px 48px;
   background-position:0 0;
+  filter:none;opacity:1;
 }
 [data-theme="lace"] .topbar{
   padding-bottom:0;
@@ -80,7 +82,8 @@
 }
 [data-theme="lace"] .tabs button.on{background:var(--brand);color:#fff;font-weight:600;box-shadow:0 0 0 3px #fff, 0 2px 8px rgba(234,166,192,.45);}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:24px;}
+html{background:var(--bg);}
+body{margin:0;color:var(--ink);font:16px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:24px;}
 .wrap{max-width:760px;margin:0 auto;padding:0 12px;}
 .topbar{position:sticky;top:0;z-index:70;background:var(--bg);padding:10px 0 6px;}
 .topbar h1{font-size:18px;margin:0 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
@@ -363,26 +366,31 @@ textarea{resize:vertical;}
 .tool-menu button{display:block;width:100%;border:none;background:transparent;color:var(--ink);font-size:13px;padding:9px 10px;border-radius:8px;cursor:pointer;text-align:left;white-space:nowrap;}
 .tool-menu button:active,.tool-menu button:hover{background:var(--bg);}
 .wall-file{position:absolute;left:-9999px;opacity:0;width:1px;height:1px;}
-/* 磨砂玻璃质感（全局） */
-body{position:relative;background:var(--bg);}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+/* 雾蒙蒙玻璃质感（全局） */
+body{position:relative;}
+/* 背景柔和光斑（朦胧色，不刺眼） */
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:
-    radial-gradient(42vw 42vw at 10% 14%, rgba(123,162,255,.30), transparent 70%),
-    radial-gradient(38vw 38vw at 90% 10%, rgba(255,143,163,.26), transparent 70%),
-    radial-gradient(48vw 48vw at 82% 88%, rgba(123,92,255,.20), transparent 70%),
-    radial-gradient(40vw 40vw at 14% 86%, rgba(67,201,138,.16), transparent 70%);
-  filter:blur(46px) saturate(.82);opacity:.95;}
-.topbar{background:rgba(247,248,250,.72);backdrop-filter:blur(12px) saturate(1.05);-webkit-backdrop-filter:blur(12px) saturate(1.05);}
-.card{background:rgba(255,255,255,.58);backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);border:1px solid rgba(255,255,255,.65);box-shadow:0 10px 34px rgba(30,40,60,.10);}
-[data-theme="dark"] .topbar{background:rgba(22,24,29,.72);}
-[data-theme="dark"] .card{background:rgba(42,46,56,.55);border-color:rgba(255,255,255,.10);box-shadow:0 10px 34px rgba(0,0,0,.35);}
-[data-theme="lace"] .topbar{background:rgba(255,255,255,.7);}
-[data-theme="lace"] .card{background:rgba(255,250,252,.66);}
-[data-theme="peach"] .card{background:rgba(255,250,248,.62);}
-input,textarea,select{background:rgba(255,255,255,.5);}
-[data-theme="dark"] input,[data-theme="dark"] textarea,[data-theme="dark"] select{background:rgba(255,255,255,.06);}
-.tool-menu{background:rgba(255,255,255,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
-[data-theme="dark"] .tool-menu{background:rgba(42,46,56,.85);}
+    radial-gradient(44vw 44vw at 8% 12%, rgba(123,162,255,.34), transparent 70%),
+    radial-gradient(40vw 40vw at 92% 8%, rgba(255,143,163,.30), transparent 70%),
+    radial-gradient(50vw 50vw at 84% 90%, rgba(123,92,255,.22), transparent 70%),
+    radial-gradient(42vw 42vw at 12% 90%, rgba(67,201,138,.18), transparent 70%);
+  filter:blur(60px) saturate(.78);opacity:.9;}
+/* 全屏薄雾：让整体雾蒙蒙、半通透 */
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.16));}
+.topbar{background:rgba(247,248,250,.50);backdrop-filter:blur(10px) saturate(1.08);-webkit-backdrop-filter:blur(10px) saturate(1.08);border-bottom:1px solid rgba(255,255,255,.45);}
+.card{background:rgba(255,255,255,.40);backdrop-filter:blur(11px) saturate(1.12);-webkit-backdrop-filter:blur(11px) saturate(1.12);border:1px solid rgba(255,255,255,.55);box-shadow:0 8px 30px rgba(30,40,60,.10), inset 0 1px 0 rgba(255,255,255,.6);}
+[data-theme="dark"] .topbar{background:rgba(22,24,29,.50);}
+[data-theme="dark"] .card{background:rgba(42,46,56,.40);border-color:rgba(255,255,255,.12);box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);}
+[data-theme="dark"] body::after{background:linear-gradient(180deg, rgba(8,10,14,.38), rgba(8,10,14,.22));}
+[data-theme="lace"] .topbar{background:rgba(255,255,255,.48);}
+[data-theme="lace"] .card{background:rgba(255,250,252,.50);}
+[data-theme="peach"] .card{background:rgba(255,250,248,.44);}
+input,textarea,select{background:rgba(255,255,255,.36);}
+[data-theme="dark"] input,[data-theme="dark"] textarea,[data-theme="dark"] select{background:rgba(255,255,255,.05);}
+.tool-menu{background:rgba(255,255,255,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+[data-theme="dark"] .tool-menu{background:rgba(42,46,56,.82);}
 .ai-set{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;}
 .ai-set summary{cursor:pointer;font-size:13.5px;color:var(--brand);padding:4px 0;}
 .ai-set label{margin-top:8px;}

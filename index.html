@@ -303,6 +303,13 @@ textarea{resize:vertical;}
 .lg-recent-item .tx{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .lg-recent-item .tx .muted{font-size:12px;margin-left:4px;}
 .lg-recent-item .amt{flex:0 0 auto;font-size:14px;color:var(--ink);}
+.lg-src{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 2px;}
+.lg-src .lbl{font-size:12px;color:var(--sub);margin-right:2px;}
+.lg-src-btn{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;padding:5px 11px;font-size:13px;cursor:pointer;transition:.15s;}
+.lg-src-btn.on{background:var(--brand,#ff7eb3);border-color:var(--brand,#ff7eb3);color:#fff;font-weight:600;}
+.lg-src-sum{margin-top:8px;font-size:13px;color:var(--ink);display:flex;flex-wrap:wrap;gap:4px 12px;}
+.lg-src-sum b{color:var(--ink);}
+.lg-recent-item .tx .src{font-size:14px;margin-left:2px;}
 .lg-recent-item .x{color:var(--bad);cursor:pointer;flex:0 0 auto;padding:0 2px;font-size:15px;}
 /* ===== 咔咔教练 ===== */
 .kaka-head{display:flex;align-items:flex-start;gap:10px;margin:8px 0;}
@@ -684,10 +691,17 @@ input,textarea,select{background:rgba(255,255,255,.26);}
         <button class="btn sm" id="lgAdd">记一笔</button>
       </div>
       <div class="lg-cats" id="lgCats"></div>
+      <div class="lg-src" id="lgSrc">
+        <span class="lbl">这笔从哪个 App 花的？</span>
+        <button type="button" class="lg-src-btn" data-src="拼多多">🛒 拼多多</button>
+        <button type="button" class="lg-src-btn" data-src="抖音">🎵 抖音</button>
+        <button type="button" class="lg-src-btn" data-src="美团">🍜 美团</button>
+      </div>
 
       <!-- ② 自动统计：彩色占比横条 + 金额/百分比 -->
       <div class="lg-bar" id="lgBar"></div>
       <div class="lg-detail" id="lgDetail"></div>
+      <div class="lg-src-sum" id="lgSrcSum"></div>
 
       <!-- ③ 最近记的（带名字，方便回忆；轻量卡片，不是表格） -->
       <div class="lg-recent" id="lgRecent"></div>
@@ -1468,6 +1482,15 @@ var LEDGER_CATS=[ // 5 个分类，每个一个颜色，顺序即占比横条顺
 ];
 var LEDGER_CAT_KEYS=LEDGER_CATS.map(function(c){return c.key;});
 var ledgerSel='餐饮'; // 当前选中的分类（默认餐饮）
+var ledgerSrc=''; // 当前选中的消费来源平台（拼多多/抖音/美团），空=未选
+var SRC_EMOJI={'拼多多':'🛒','抖音':'🎵','美团':'🍜'};
+function renderLedgerSrc(){
+  var box=$('lgSrc'); if(!box) return;
+  box.querySelectorAll('.lg-src-btn').forEach(function(b){
+    b.classList.toggle('on', b.dataset.src===ledgerSrc);
+    b.onclick=function(){ ledgerSrc=(ledgerSrc===b.dataset.src)?'':b.dataset.src; renderLedgerSrc(); };
+  });
+}
 function ledgerMonthKey(){ var d=new Date(); return 'adhd_ledger_'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function getLedger(){ return lsGet(ledgerMonthKey())||[]; }
 function renderLedgerCats(){ // 画分类标签
@@ -1478,6 +1501,7 @@ function renderLedgerCats(){ // 画分类标签
   $('lgCats').querySelectorAll('.lg-cat').forEach(function(b){ b.addEventListener('click',function(){ ledgerSel=b.dataset.cat; renderLedgerCats(); }); });
 }
 function renderLedger(){
+  renderLedgerSrc();
   var list=getLedger();
   // ③ 预算护栏
   var sum=list.reduce(function(a,e){return a+(parseFloat(e.amount)||0);},0);
@@ -1495,6 +1519,10 @@ function renderLedger(){
   if(!bar) bar='<i style="width:100%;background:#ececec"></i>';
   $('lgBar').innerHTML=bar;
   $('lgDetail').innerHTML=detail||'<div class="muted">本月还没记账，想起来就记一笔。</div>';
+  // 三平台本月小计
+  var bySrc={'拼多多':0,'抖音':0,'美团':0};
+  list.forEach(function(e){ if(bySrc[e.src]!==undefined) bySrc[e.src]+=(parseFloat(e.amount)||0); });
+  $('lgSrcSum').innerHTML=['拼多多','抖音','美团'].map(function(k){return SRC_EMOJI[k]+' '+k+' <b>¥'+bySrc[k].toFixed(2)+'</b>';}).join(' · ')||'<span class="muted">从这三个 App 花的钱会在这里汇总～</span>';
   // ④ 温柔提醒
   $('ledgerTip').textContent=ledgerTip(byCat,total,left);
   // ③ 最近记的（带名字，倒序，可删除，帮助回忆花在哪）
@@ -1504,7 +1532,7 @@ function renderLedger(){
     var c=LEDGER_CATS.filter(function(x){return x.key===r.e.cat;})[0]||LEDGER_CATS[LEDGER_CATS.length-1];
     rh+='<div class="lg-recent-item">'
       +'<span class="dot" style="background:'+c.color+'"></span>'
-      +'<div class="tx"><b>'+esc(r.e.note||'未写名字')+'</b> <span class="muted">'+esc(r.e.cat)+'</span></div>'
+      +'<div class="tx"><b>'+esc(r.e.note||'未写名字')+'</b>'+(SRC_EMOJI[r.e.src]?' <span class="src">'+SRC_EMOJI[r.e.src]+'</span>':'')+' <span class="muted">'+esc(r.e.cat)+'</span></div>'
       +'<b class="amt">¥'+(parseFloat(r.e.amount)||0).toFixed(2)+'</b>'
       +'<span class="x" data-i="'+r.idx+'">✕</span>'
       +'</div>';
@@ -1526,7 +1554,7 @@ function ledgerTip(byCat,total,left){ // 永远不指责
 $('lgAdd').addEventListener('click',function(){
   var a=parseFloat($('lgAmount').value); if(!(a>0)){ $('lgAmount').focus(); return; }
   var name=$('lgName').value.trim();
-  var l=getLedger(); l.push({date:tkey(), amount:a, cat:ledgerSel, note:name}); lsSet(ledgerMonthKey(),l);
+  var l=getLedger(); l.push({date:tkey(), amount:a, cat:ledgerSel, note:name, src:ledgerSrc}); lsSet(ledgerMonthKey(),l);
   $('lgName').value=''; $('lgAmount').value=''; renderLedger();
 });
 /* 旧数据迁移：把早期 adhd_exp 记的账并入按月的 adhd_ledger_YYYY-MM（只做一次，绝不删用户数据） */

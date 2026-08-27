@@ -50,19 +50,7 @@
   border-bottom:1px solid var(--brand2);
 }
 [data-theme="lace"] .card{
-  border:2px solid var(--brand2);
-  box-shadow:0 0 0 3px #fff inset, 0 0 0 5px var(--brand2) inset, 0 0 0 6px #fff inset, 0 6px 22px rgba(200,140,170,.18);
   position:relative;
-}
-[data-theme="lace"] .card::before{
-  content:"";position:absolute;left:0;right:0;top:-2px;height:16px;
-  background:radial-gradient(circle at 11px -2px, #fff 9px, transparent 10px) repeat-x;
-  background-size:22px 16px;
-}
-[data-theme="lace"] .card::after{
-  content:"";position:absolute;left:0;right:0;bottom:-2px;height:16px;
-  background:radial-gradient(circle at 11px 18px, #fff 9px, transparent 10px) repeat-x;
-  background-size:22px 16px;
 }
 [data-theme="lace"] .card h2{
   border-bottom:1px dotted var(--brand2);
@@ -281,7 +269,6 @@ textarea{resize:vertical;}
 [data-theme="kitty"] .lace-deco{display:none;}
 [data-theme="kitty"] .kitty-deco{display:block;border-bottom:2px solid #ffd1e3;}
 [data-theme="kitty"] .topbar{box-shadow:0 2px 12px rgba(255,126,179,.22);}
-[data-theme="kitty"] .card{border:2px solid #ffd1e3;box-shadow:0 6px 22px rgba(255,126,179,.16);}
 [data-theme="kitty"] .tabs button.on{background:var(--brand);color:#fff;font-weight:600;box-shadow:0 0 0 3px #fff,0 2px 8px rgba(255,126,179,.45);}
 [data-theme="kitty"] .btn{background:var(--brand);color:#fff;border-color:var(--brand);}
 [data-theme="kitty"] .btn.ghost{background:#fff;color:var(--brand);}

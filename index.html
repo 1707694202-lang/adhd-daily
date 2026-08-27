@@ -366,31 +366,67 @@ textarea{resize:vertical;}
 .tool-menu button{display:block;width:100%;border:none;background:transparent;color:var(--ink);font-size:13px;padding:9px 10px;border-radius:8px;cursor:pointer;text-align:left;white-space:nowrap;}
 .tool-menu button:active,.tool-menu button:hover{background:var(--bg);}
 .wall-file{position:absolute;left:-9999px;opacity:0;width:1px;height:1px;}
-/* 雾蒙蒙玻璃质感（全局） */
-body{position:relative;}
-/* 背景柔和光斑（朦胧色，不刺眼） */
-body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+/* ===== 苹果风玻璃质感（全局，五个皮肤统一） ===== */
+body{position:relative;min-height:100vh;}
+/* 背景柔和光斑：色彩明显一点，但仍朦胧可爱 */
+body::before{content:"";position:fixed;inset:-12%;z-index:-2;pointer-events:none;
   background:
-    radial-gradient(44vw 44vw at 8% 12%, rgba(123,162,255,.34), transparent 70%),
-    radial-gradient(40vw 40vw at 92% 8%, rgba(255,143,163,.30), transparent 70%),
-    radial-gradient(50vw 50vw at 84% 90%, rgba(123,92,255,.22), transparent 70%),
-    radial-gradient(42vw 42vw at 12% 90%, rgba(67,201,138,.18), transparent 70%);
-  filter:blur(60px) saturate(.78);opacity:.9;}
-/* 全屏薄雾：让整体雾蒙蒙、半通透 */
+    radial-gradient(46vw 46vw at 10% 10%, rgba(118,156,255,.58), transparent 66%),
+    radial-gradient(42vw 42vw at 92% 6%,  rgba(255,128,162,.52), transparent 66%),
+    radial-gradient(52vw 52vw at 88% 94%, rgba(150,108,255,.44), transparent 66%),
+    radial-gradient(44vw 44vw at 6% 94%,  rgba(64,200,134,.36), transparent 66%);
+  filter:blur(48px) saturate(.92);opacity:1;}
+/* 全屏薄雾：雾蒙蒙、半通透（压低白雾，别盖住彩色） */
 body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.16));}
-.topbar{background:rgba(247,248,250,.50);backdrop-filter:blur(10px) saturate(1.08);-webkit-backdrop-filter:blur(10px) saturate(1.08);border-bottom:1px solid rgba(255,255,255,.45);}
-.card{background:rgba(255,255,255,.40);backdrop-filter:blur(11px) saturate(1.12);-webkit-backdrop-filter:blur(11px) saturate(1.12);border:1px solid rgba(255,255,255,.55);box-shadow:0 8px 30px rgba(30,40,60,.10), inset 0 1px 0 rgba(255,255,255,.6);}
-[data-theme="dark"] .topbar{background:rgba(22,24,29,.50);}
-[data-theme="dark"] .card{background:rgba(42,46,56,.40);border-color:rgba(255,255,255,.12);box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);}
-[data-theme="dark"] body::after{background:linear-gradient(180deg, rgba(8,10,14,.38), rgba(8,10,14,.22));}
-[data-theme="lace"] .topbar{background:rgba(255,255,255,.48);}
-[data-theme="lace"] .card{background:rgba(255,250,252,.50);}
-[data-theme="peach"] .card{background:rgba(255,250,248,.44);}
-input,textarea,select{background:rgba(255,255,255,.36);}
+  background:rgba(255,255,255,.12);}
+/* 顶栏玻璃 */
+.topbar{background:rgba(247,248,250,.42);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border-bottom:1px solid rgba(255,255,255,.22);}
+/* 玻璃卡片：半透 + 强模糊 + 顶部高光 + 极淡边缘微光，无实线边框 */
+.card{
+  background:rgba(255,255,255,.30);
+  backdrop-filter:blur(20px) saturate(1.4);
+  -webkit-backdrop-filter:blur(20px) saturate(1.4);
+  border:none;
+  box-shadow:
+    0 8px 32px rgba(31,38,60,.12),
+    inset 0 1px 1px rgba(255,255,255,.72),
+    inset 0 0 0 1px rgba(255,255,255,.18);
+}
+/* 暗色皮肤玻璃 */
+[data-theme="dark"] .topbar{background:rgba(22,24,29,.50);border-bottom-color:rgba(255,255,255,.08);}
+[data-theme="dark"] .card{
+  background:rgba(42,46,56,.36);
+  box-shadow:
+    0 8px 32px rgba(0,0,0,.40),
+    inset 0 1px 1px rgba(255,255,255,.10),
+    inset 0 0 0 1px rgba(255,255,255,.10);
+}
+[data-theme="dark"] body::after{background:rgba(8,10,14,.30);}
+/* 蕾丝皮肤玻璃（淡粉） */
+[data-theme="lace"] .topbar{background:rgba(255,255,255,.42);}
+[data-theme="lace"] .card{background:rgba(255,250,252,.42);}
+/* 蜜桃皮肤玻璃（淡橙） */
+[data-theme="peach"] .card{background:rgba(255,250,248,.38);}
+/* 凯蒂猫皮肤玻璃（淡粉，去掉实心粉边框） */
+[data-theme="kitty"] .topbar{background:rgba(255,240,246,.46);border-bottom-color:rgba(255,209,227,.5);}
+[data-theme="kitty"] .card{
+  background:rgba(255,240,246,.40);
+  box-shadow:
+    0 8px 28px rgba(255,126,179,.18),
+    inset 0 1px 1px rgba(255,255,255,.70),
+    inset 0 0 0 1px rgba(255,209,227,.50);
+}
+/* 输入框玻璃 */
+input,textarea,select{background:rgba(255,255,255,.26);}
 [data-theme="dark"] input,[data-theme="dark"] textarea,[data-theme="dark"] select{background:rgba(255,255,255,.05);}
-.tool-menu{background:rgba(255,255,255,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
-[data-theme="dark"] .tool-menu{background:rgba(42,46,56,.82);}
+/* 工具菜单玻璃 */
+.tool-menu{background:rgba(255,255,255,.72);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
+[data-theme="dark"] .tool-menu{background:rgba(42,46,56,.80);}
+/* 侧栏与顶栏按钮也统一玻璃（避免切主题/开侧栏时露实色） */
+.sidebar{background:rgba(255,255,255,.62);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);}
+[data-theme="dark"] .sidebar{background:rgba(28,32,40,.72);}
+.tools button{background:rgba(255,255,255,.50);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+[data-theme="dark"] .tools button{background:rgba(255,255,255,.10);}
 .ai-set{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;}
 .ai-set summary{cursor:pointer;font-size:13.5px;color:var(--brand);padding:4px 0;}
 .ai-set label{margin-top:8px;}

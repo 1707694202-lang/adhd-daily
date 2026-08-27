@@ -365,11 +365,11 @@ body{position:relative;min-height:100vh;}
 /* 顶栏玻璃 */
 .topbar{background:rgba(247,248,250,.42);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border-bottom:1px solid rgba(255,255,255,.22);}
 /* 玻璃卡片：苹果液态玻璃 Liquid Glass —— 浅色款（light/peach/lace/kitty 统一套用） */
-/* 无 solid 描边，靠左上角径向柔光模拟边角反光，右下几乎无反光 */
+/* 无任何 solid 描边/连续轮廓线；高光仅沿左上圆角窄窄一条，右下反光完全消去 */
 .card{
   background:
-    radial-gradient(120% 120% at 0% 0%, rgba(255,255,255,.22), rgba(255,255,255,0) 42%),
-    rgba(255,255,255,.14);
+    radial-gradient(38% 38% at 0% 0%, rgba(255,255,255,.21), rgba(255,255,255,0) 55%),
+    rgba(255,255,255,.13);
   backdrop-filter:blur(8px) saturate(1.3);
   -webkit-backdrop-filter:blur(8px) saturate(1.3);
   border:none;
@@ -381,16 +381,15 @@ body{position:relative;min-height:100vh;}
   transform:scale(1.02);
   backdrop-filter:blur(10px) saturate(1.4);
   -webkit-backdrop-filter:blur(10px) saturate(1.4);
-  box-shadow:0 14px 36px rgba( 31,38,60,.13);
 }
 /* 暗色皮肤顶栏玻璃 */
 [data-theme="dark"] .topbar{background:rgba(22,24,29,.50);border-bottom-color:rgba(255,255,255,.08);}
 /* 玻璃卡片：深色款苹果液态玻璃 Liquid Glass —— 暗夜模式 */
-/* 无 solid 描边，靠左上角冷色柔光模拟边角反光，右下几乎无反光 */
+/* 无 solid 描边；高光仅沿左上圆角窄窄一条冷色，右下消去，基底轻薄 */
 [data-theme="dark"] .card{
   background:
-    radial-gradient(120% 120% at 0% 0%, rgba(170,200,255,.20), rgba(170,200,255,0) 42%),
-    rgba(255,255,255,.16);
+    radial-gradient(38% 38% at 0% 0%, rgba(170,200,255,.20), rgba(170,200,255,0) 55%),
+    rgba(255,255,255,.13);
   backdrop-filter:blur(10px) saturate(1.3);
   -webkit-backdrop-filter:blur(10px) saturate(1.3);
   border:none;
@@ -402,7 +401,6 @@ body{position:relative;min-height:100vh;}
   transform:scale(1.02);
   backdrop-filter:blur(12px) saturate(1.4);
   -webkit-backdrop-filter:blur(12px) saturate(1.4);
-  box-shadow:0 14px 36px rgba(0,0,0,.22);
 }
 /* 蕾丝皮肤顶栏玻璃 */
 [data-theme="lace"] .topbar{background:rgba(255,255,255,.42);}

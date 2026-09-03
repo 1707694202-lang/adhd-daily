@@ -275,6 +275,8 @@ textarea{resize:vertical;}
 /* ===== 记账模块样式（简洁白 / 手机优先） ===== */
 .ledger-budget{font-size:15px;margin:4px 0 8px;color:var(--sub);}
 .ledger-budget b{font-size:17px;color:var(--ink);}
+.lg-month{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 8px;font-size:14px;color:var(--sub);}
+.btn.xs{padding:4px 10px;font-size:13px;margin:0;}
 .lg-cats{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px;}
 .lg-cat{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;padding:5px 12px;font-size:13px;cursor:pointer;transition:.15s;}
 .lg-cat.on{background:var(--c);border-color:var(--c);color:#fff;font-weight:600;}
@@ -345,14 +347,14 @@ body{position:relative;min-height:100vh;}
 /* 顶栏玻璃 */
 .topbar{background:rgba(247,248,250,.42);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border-bottom:1px solid rgba(255,255,255,.22);}
 /* 玻璃卡片：苹果液态玻璃 Liquid Glass —— 浅色款（light/peach/lace/kitty 统一套用） */
-/* 无任何 solid 描边/连续轮廓线；高光仅沿左上圆角窄窄一条，右下反光完全消去 */
+/* 无 solid 描边/整圈轮廓；底色极淡让背后纹理透出；高光仅沿左上圆角窄窄一道，右下关闭 */
 .card{
-  background:
-    radial-gradient(38% 38% at 0% 0%, rgba(255,255,255,.21), rgba(255,255,255,0) 55%),
-    rgba(255,255,255,.13);
-  backdrop-filter:blur(8px) saturate(1.3);
-  -webkit-backdrop-filter:blur(8px) saturate(1.3);
+  background-color:rgba(255,255,255,.11);
+  background-image:radial-gradient(20% 20% at 0% 0%, rgba(255,255,255,.24) 0%, rgba(255,255,255,0) 70%);
+  backdrop-filter:blur(8px) saturate(1.25);
+  -webkit-backdrop-filter:blur(8px) saturate(1.25);
   border:none;
+  outline:none;
   border-radius:18px;
   box-shadow:0 10px 30px rgba(31,38,60,.10);
   transition:transform .28s cubic-bezier(.2,0,.2,1), backdrop-filter .28s cubic-bezier(.2,0,.2,1), -webkit-backdrop-filter .28s cubic-bezier(.2,0,.2,1), box-shadow .28s cubic-bezier(.2,0,.2,1);
@@ -367,20 +369,20 @@ body{position:relative;min-height:100vh;}
 /* 玻璃卡片：深色款苹果液态玻璃 Liquid Glass —— 暗夜模式 */
 /* 无 solid 描边；高光仅沿左上圆角窄窄一条冷色，右下消去，基底轻薄 */
 [data-theme="dark"] .card{
-  background:
-    radial-gradient(38% 38% at 0% 0%, rgba(170,200,255,.20), rgba(170,200,255,0) 55%),
-    rgba(255,255,255,.13);
-  backdrop-filter:blur(10px) saturate(1.3);
-  -webkit-backdrop-filter:blur(10px) saturate(1.3);
+  background-color:rgba(255,255,255,.06);
+  background-image:radial-gradient(20% 20% at 0% 0%, rgba(170,200,255,.24) 0%, rgba(170,200,255,0) 70%);
+  backdrop-filter:blur(8px) saturate(1.25);
+  -webkit-backdrop-filter:blur(8px) saturate(1.25);
   border:none;
+  outline:none;
   border-radius:18px;
   box-shadow:0 10px 30px rgba(0,0,0,.18);
   transition:transform .28s cubic-bezier(.2,0,.2,1), backdrop-filter .28s cubic-bezier(.2,0,.2,1), -webkit-backdrop-filter .28s cubic-bezier(.2,0,.2,1), box-shadow .28s cubic-bezier(.2,0,.2,1);
 }
 [data-theme="dark"] .card:hover{
   transform:scale(1.02);
-  backdrop-filter:blur(12px) saturate(1.4);
-  -webkit-backdrop-filter:blur(12px) saturate(1.4);
+  backdrop-filter:blur(10px) saturate(1.4);
+  -webkit-backdrop-filter:blur(10px) saturate(1.4);
 }
 /* 蕾丝皮肤顶栏玻璃 */
 [data-theme="lace"] .topbar{background:rgba(255,255,255,.42);}
@@ -585,7 +587,15 @@ input,textarea,select{background:rgba(255,255,255,.26);}
     </div>
 
     <div class="card">
-      <h2>💰 记账 / 搞钱 <span class="hint">本月花多少 · 按月存档</span></h2>
+      <h2>💰 记账 / 搞钱 <span class="hint">按月存档 · 可翻看往月</span></h2>
+
+      <!-- 月份切换条：点「上个月 / 下个月」翻看任意月份 -->
+      <div class="lg-month" id="lgMonth">
+        <button class="btn xs" id="lgPrevM" type="button">‹ 上个月</button>
+        <span id="lgMonthLabel" style="font-weight:600;margin:0 2px"></span>
+        <button class="btn xs" id="lgNextM" type="button">下个月 ›</button>
+        <button class="btn xs" id="lgBackM" type="button" style="display:none;margin-left:6px">回到本月</button>
+      </div>
 
       <!-- ③ 预算护栏：本月已花 / 预算 / 还剩 -->
       <div class="ledger-budget" id="ledgerBudget"></div>
@@ -1312,8 +1322,12 @@ function renderLedgerSrc(){
     b.onclick=function(){ ledgerSrc=(ledgerSrc===b.dataset.src)?'':b.dataset.src; renderLedgerSrc(); };
   });
 }
-function ledgerMonthKey(){ var d=new Date(); return 'adhd_ledger_'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-function getLedger(){ return lsGet(ledgerMonthKey())||[]; }
+/* 月份键：真实当前月、查看月（可翻到任意历史月） */
+function realMonthStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function ledgerKeyOf(ym){ return 'adhd_ledger_'+ym; }
+function monthAdd(ym,delta){ var p=ym.split('-'); var d=new Date(+p[0],+p[1]-1,1); d.setMonth(d.getMonth()+delta); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+var ledgerView=null; // null=看本月；否则查看的 'YYYY-MM'
+function getLedger(ym){ return lsGet(ledgerKeyOf(ym||realMonthStr()))||[]; }
 function renderLedgerCats(){ // 画分类标签
   var html=''; LEDGER_CATS.forEach(function(c){
     html+='<button class="lg-cat'+(c.key===ledgerSel?' on':'')+'" data-cat="'+c.key+'" style="--c:'+c.color+'">'+c.key+'</button>';
@@ -1323,11 +1337,16 @@ function renderLedgerCats(){ // 画分类标签
 }
 function renderLedger(){
   renderLedgerSrc();
-  var list=getLedger();
+  var view=ledgerView||realMonthStr();
+  var list=getLedger(view);
   // ③ 预算护栏
   var sum=list.reduce(function(a,e){return a+(parseFloat(e.amount)||0);},0);
   var left=LEDGER_BUDGET-sum;
-  $('ledgerBudget').innerHTML='本月已花 <b>¥'+sum.toFixed(2)+'</b> / 预算 <b>¥'+LEDGER_BUDGET.toFixed(2)+'</b> / 还剩 <b style="color:'+(left>=0?'#2faa5a':'#e5484d')+'">¥'+left.toFixed(2)+'</b>';
+  if(view===realMonthStr()){
+    $('ledgerBudget').innerHTML='本月已花 <b>¥'+sum.toFixed(2)+'</b> / 预算 <b>¥'+LEDGER_BUDGET.toFixed(2)+'</b> / 还剩 <b style="color:'+(left>=0?'#2faa5a':'#e5484d')+'">¥'+left.toFixed(2)+'</b>';
+  }else{
+    $('ledgerBudget').innerHTML='<b>'+view.replace('-','年')+'月</b> 已花 <b>¥'+sum.toFixed(2)+'</b> <span class="muted">（历史月，只可查看 / 删除）</span>';
+  }
   // ② 分类统计
   var byCat={}; LEDGER_CAT_KEYS.forEach(function(k){byCat[k]=0;});
   list.forEach(function(e){ if(byCat[e.cat]!==undefined) byCat[e.cat]+=(parseFloat(e.amount)||0); });
@@ -1345,7 +1364,8 @@ function renderLedger(){
   list.forEach(function(e){ if(bySrc[e.src]!==undefined) bySrc[e.src]+=(parseFloat(e.amount)||0); });
   $('lgSrcSum').innerHTML=['拼多多','抖音','美团'].map(function(k){return SRC_EMOJI[k]+' '+k+' <b>¥'+bySrc[k].toFixed(2)+'</b>';}).join(' · ')||'<span class="muted">从这三个 App 花的钱会在这里汇总～</span>';
   // ④ 温柔提醒
-  $('ledgerTip').textContent=ledgerTip(byCat,total,left);
+  if(view===realMonthStr()){ $('ledgerTip').textContent=ledgerTip(byCat,total,left); }
+  else { $('ledgerTip').textContent='这是 '+view.replace('-','年')+'月 的账，看看就好～哪笔记错了点 ✕ 就能删。'; }
   // ③ 最近记的（带名字，倒序，可删除，帮助回忆花在哪）
   var rec=list.slice().reverse().map(function(e,idx){return {e:e, idx:list.length-1-idx};});
   var rh='';
@@ -1360,9 +1380,18 @@ function renderLedger(){
   });
   $('lgRecent').innerHTML=rh||'<div class="muted" style="margin-top:4px">记完会显示在这里，带名字方便回忆。</div>';
   $('lgRecent').querySelectorAll('.x').forEach(function(x){x.addEventListener('click',function(){
-    var arr=getLedger(); arr.splice(+x.dataset.i,1); lsSet(ledgerMonthKey(),arr); renderLedger();
+    var arr=getLedger(ledgerView); arr.splice(+x.dataset.i,1); lsSet(ledgerKeyOf(ledgerView||realMonthStr()),arr); renderLedger();
   });});
 }
+/* 月份切换条：更新标签 + 回到本月按钮显隐 */
+function renderLedgerMonthBar(){
+  var view=ledgerView||realMonthStr();
+  $('lgMonthLabel').textContent=view.replace('-','年')+'月';
+  $('lgBackM').style.display=(view===realMonthStr())?'none':'inline-block';
+}
+$('lgPrevM').addEventListener('click',function(){ var view=ledgerView||realMonthStr(); ledgerView=monthAdd(view,-1); renderLedger(); renderLedgerMonthBar(); });
+$('lgNextM').addEventListener('click',function(){ var view=ledgerView||realMonthStr(); var nx=monthAdd(view,1); ledgerView=(nx===realMonthStr())?null:nx; renderLedger(); renderLedgerMonthBar(); });
+$('lgBackM').addEventListener('click',function(){ ledgerView=null; renderLedger(); renderLedgerMonthBar(); });
 function ledgerTip(byCat,total,left){ // 永远不指责
   if(total<=0) return '这个月还没开始记账，想起来就记一笔，不急。';
   var maxKey='', maxV=0;
@@ -1375,8 +1404,8 @@ function ledgerTip(byCat,total,left){ // 永远不指责
 $('lgAdd').addEventListener('click',function(){
   var a=parseFloat($('lgAmount').value); if(!(a>0)){ $('lgAmount').focus(); return; }
   var name=$('lgName').value.trim();
-  var l=getLedger(); l.push({date:tkey(), amount:a, cat:ledgerSel, note:name, src:ledgerSrc}); lsSet(ledgerMonthKey(),l);
-  $('lgName').value=''; $('lgAmount').value=''; renderLedger();
+  var l=getLedger(realMonthStr()); l.push({date:tkey(), amount:a, cat:ledgerSel, note:name, src:ledgerSrc}); lsSet(ledgerKeyOf(realMonthStr()),l);
+  $('lgName').value=''; $('lgAmount').value=''; ledgerView=null; renderLedger(); renderLedgerMonthBar();
 });
 /* 旧数据迁移：把早期 adhd_exp 记的账并入按月的 adhd_ledger_YYYY-MM（只做一次，绝不删用户数据） */
 function migrateOldLedger(){
@@ -1839,7 +1868,7 @@ $('ltSplit').addEventListener('click',async function(){
 
 /* ============ 初始化（放在末尾：所有数据常量与函数均已就绪） ============ */
 loadWx();renderPeri();renderHabits();renderAffirms();renderDiary();
-renderCourse();renderTodos();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderIdeas();
+renderCourse();renderTodos();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderLedgerMonthBar();renderIdeas();
 renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();
 var pcb=$('planCoachBtn'); if(pcb){pcb.addEventListener('click',function(){var u=pcb.dataset.pc; if(u&&u.indexOf('__')!==0&&u.trim()){window.open(u,'_blank');}else{alert('这个按钮还没填 PlanCoach 的打开链接，跟妮妮说一声就给你填上。');}});}
 applyWallpaper();loadAICfg();renderLong();renderShort();renderWeeklyReview();

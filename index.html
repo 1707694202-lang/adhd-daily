@@ -291,6 +291,9 @@ textarea{resize:vertical;}
 .lg-month{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 8px;font-size:14px;color:var(--sub);}
 .btn.xs{padding:4px 10px;font-size:13px;margin:0;}
 .lg-cats{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px;}
+.lg-ai{background:rgba(184,218,252,.16);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0;}
+.lg-ai-hint{font-size:13px;color:var(--sub);margin-bottom:4px;}
+.lg-ai-preview{font-size:13px;color:var(--ink);margin-top:6px;line-height:1.7;}
 .lg-cat{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;padding:5px 12px;font-size:13px;cursor:pointer;transition:.15s;}
 .lg-cat.on{background:var(--c);border-color:var(--c);color:#fff;font-weight:600;}
 .lg-bar{display:flex;height:14px;border-radius:8px;overflow:hidden;background:#f1f1f1;margin:8px 0 6px;gap:1px;}
@@ -582,6 +585,16 @@ input,textarea,select{background:rgba(255,255,255,.26);}
 
       <!-- ③ 预算护栏：本月已花 / 预算 / 还剩 -->
       <div class="ledger-budget" id="ledgerBudget"></div>
+
+      <!-- 智能识别：一句话记多笔（中文金额也行） -->
+      <div class="lg-ai" id="lgAi">
+        <div class="lg-ai-hint">一句话记多笔（中文金额也行）：<span class="muted">例：蚊帐20块八 饮料三块二 地铁5元</span></div>
+        <div class="row" style="margin:6px 0">
+          <input id="lgText" placeholder="蚊帐20块八 饮料三块二 地铁5元" style="flex:1">
+          <button class="btn sm" id="lgAiAdd">识别并添加</button>
+        </div>
+        <div class="lg-ai-preview" id="lgAiPreview"></div>
+      </div>
 
       <!-- ① 记一笔：花销名字 + 金额 + 分类 + 记一笔 -->
       <div class="row" style="margin:6px 0">
@@ -1245,6 +1258,11 @@ function renderLedgerSrc(){
 function realMonthStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function ledgerKeyOf(ym){ return 'adhd_ledger_'+ym; }
 function monthAdd(ym,delta){ var p=ym.split('-'); var d=new Date(+p[0],+p[1]-1,1); d.setMonth(d.getMonth()+delta); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+/* 一句话记多笔：中文数字/金额识别 + 自动分类 */
+function cn2num(s){var d={'零':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'百':100,'千':1000};var sec=0,num=0;for(var i=0;i<s.length;i++){var c=s[i];if(d[c]!==undefined){if(d[c]>=10){if(d[c]===10){if(num===0)num=1;sec+=num*10;num=0;}else if(d[c]===100){sec+=num*100;num=0;}else if(d[c]===1000){sec+=num*1000;num=0;}}else{num=d[c];}}}return sec+num;}
+function zhToDigits(s){return s.replace(/[零一二两三四五六七八九十百千]+/g,function(m){return String(cn2num(m));});}
+function parseBill(text){var items=[];if(!text)return items;text=text.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);});text=zhToDigits(text);text=text.replace(/毛/g,'角');var re=/([^块元圆0-9]*?)\s*(\d+(?:\.\d+)?)\s*(?:块|元|圆)\s*(?:(\d+)\s*(?:角|毛)?)?\s*(?:(\d+)\s*分)?/g;var m;while((m=re.exec(text))){if(m.index===re.lastIndex)re.lastIndex++;var name=(m[1]||'').trim().replace(/[，,。.、；;]+$/,'')||'未命名';var yuan=parseFloat(m[2])||0;var jiao=m[3]?parseFloat(m[3]):0;var fen=m[4]?parseFloat(m[4]):0;var amount=yuan+jiao/10+fen/100;if(!(amount>0))continue;items.push({name:name,amount:Math.round(amount*100)/100});}return items;}
+function autoCat(name){name=(name||'').toLowerCase();var rules=[[/饮料|奶茶|咖啡|茶|水|酒|饭|吃|餐|面|粥|包|蛋糕|外卖|食堂|火锅|烧烤|早餐|午餐|晚餐|夜宵|小吃|汉堡|炸鸡|麻辣|香锅|寿司/, '餐饮'],[/地铁|公交|出租|打车|车|油|高铁|火车|飞机|票|快递|停车|骑行|单车|摩的|网约车|顺风/, '交通'],[/书|课|学|笔|本|资料|文具|打印|考研|教材|笔记|班|证|考试|英语|四级|六级|教辅|习题/, '学习'],[/糖|巧克|饼干|薯片|坚果|辣条|果干|冰淇淋|雪糕|膨化|糖果|布丁|果冻|瓜子/, '零食']];for(var i=0;i<rules.length;i++){if(rules[i][0].test(name))return rules[i][1];}return '其他';}
 var ledgerView=null; // null=看本月；否则查看的 'YYYY-MM'
 function getLedger(ym){ return lsGet(ledgerKeyOf(ym||realMonthStr()))||[]; }
 function renderLedgerCats(){ // 画分类标签
@@ -1325,6 +1343,19 @@ $('lgAdd').addEventListener('click',function(){
   var name=$('lgName').value.trim();
   var l=getLedger(realMonthStr()); l.push({date:tkey(), amount:a, cat:ledgerSel, note:name, src:ledgerSrc}); lsSet(ledgerKeyOf(realMonthStr()),l);
   $('lgName').value=''; $('lgAmount').value=''; ledgerView=null; renderLedger(); renderLedgerMonthBar();
+});
+$('lgAiAdd').addEventListener('click',function(){
+  var text=$('lgText').value.trim();
+  if(!text){ $('lgText').focus(); return; }
+  var items=parseBill(text);
+  if(items.length===0){ $('lgAiPreview').innerHTML='<div class="muted">没识别到金额，换种写法试试，比如：蚊帐20块八 饮料三块二</div>'; return; }
+  var ym=realMonthStr(); var cur=getLedger(ym);
+  var added=[];
+  items.forEach(function(it){ var cat=autoCat(it.name); cur.push({date:tkey(), amount:it.amount, cat:cat, note:it.name, src:ledgerSrc, ai:true}); added.push(it.name+' ¥'+it.amount.toFixed(2)+'（'+cat+'）'); });
+  lsSet(ledgerKeyOf(ym),cur);
+  ledgerView=null; renderLedger(); renderLedgerMonthBar();
+  $('lgAiPreview').innerHTML='已识别添加 '+items.length+' 笔：<br>'+added.join('<br>');
+  $('lgText').value='';
 });
 /* 旧数据迁移：把早期 adhd_exp 记的账并入按月的 adhd_ledger_YYYY-MM（只做一次，绝不删用户数据） */
 function migrateOldLedger(){

@@ -1783,7 +1783,7 @@ function loadAICfg(){var c=getAI();if(!c)return;if(c.base)$('aiBase').value=c.ba
 $('aiSave').addEventListener('click',function(){setAI({base:$('aiBase').value.trim(),key:$('aiKey').value.trim(),model:$('aiModel').value.trim()});alert('已保存 API 设置（只存在你本机）');});
 async function aiSplit(title,hint){
   var cfg=getAI();
-  if(!cfg||!cfg.key){alert('先点开「⚙️ API 设置」填好接口地址和 Key');return null;}
+  if(!cfg||!cfg.key){return null;}
   var sys='你是一个帮 ADHD 用户把大目标拆成极简可执行步骤的助手。只输出一个 JSON 数组，每个元素是一句极短的动作（不超过 15 个汉字），不要编号、不要解释、不要 markdown。';
   var user='请把这个目标拆成 4 到 8 个不可能失败的小步：'+title+(hint?('\n拆分要求：'+hint):'');
   var base=(cfg&&cfg.base)||'https://api.siliconflow.cn/v1';
@@ -1802,19 +1802,35 @@ async function aiSplit(title,hint){
   }
   return steps;
 }
+function localSplit(title,hint){
+  var t=title+''+(hint||'');var st=[];
+  if(/转专业|转系|跨专业/.test(t)){st=['查清楚本院转专业政策和成绩门槛','算一下自己目前的 GPA 和排名','列出转专业要交的材料清单','这周找辅导员或老师问一次流程','每天抽 1 小时补目标专业的课','每月复盘一次进度'];}
+  else if(/雅思|英语|口语/.test(t)){st=['今天背 20 个核心单词','每天跟读一段雅思口语范例','每周做 1 套听力模考','找人陪练口语 1 次','月底模考一次看分数'];}
+  else if(/健身|体态|减肥|塑形|圆肩/.test(t)){st=['拍一张现在的体态照片做对比','每周去 3 次，每次先热身','练完记录今天练了哪块','睡前做 5 分钟拉伸','两周量一次围度看变化'];}
+  else if(/习惯|早起|早睡|打卡|阅读|读书/.test(t)){st=['把习惯锚定到一个已有动作上（如刷牙后）','头两天只做 2 分钟，不贪多','每天在网页打卡一次','周末看一眼连续天数','坚持 7 天后加一点量'];}
+  else if(/考试|期末|考证|四六级|四级|六级/.test(t)){st=['列清楚考试范围和分值','按周做一份复习计划表','每天固定 1 小时专注复习','刷 2 套往年真题','考前一周调整作息'];}
+  else {st=['先花 10 分钟把目标写清楚、拆成一句话','查一下别人是怎么做到的','定下第一个能今天做的小动作','每天做一点点并记下来','周末看进度、调一下方向'];}
+  if(/按周|周计划/.test(t)){st=['第一周：'+st[0],'第二周：'+st[1],'第三周：'+st[2],'第四周：复盘并加量'];}
+  return st;
+}
 $('ltSplit').addEventListener('click',async function(){
   var title=$('ltTitle').value.trim(),hint=$('ltHint').value.trim();
   if(!title){$('ltTitle').focus();return;}
   var a=getLong();a.push({id:'L'+Date.now(),title:title,hint:hint});lsSet('adhd_longtasks',a);renderLong();
-  var btn=$('ltSplit');btn.disabled=true;btn.textContent='AI 拆分中…';
+  var btn=$('ltSplit');btn.disabled=true;btn.textContent='拆分中…';
+  var steps=null,note='';
   try{
-    var steps=await aiSplit(title,hint);
-    if(steps&&steps.length){
-      var sh=getShort();
-      steps.forEach(function(s){sh.push({id:'S'+Date.now()+Math.random().toString(36).slice(2,6),text:String(s).trim(),done:false});});
-      lsSet('adhd_shorttasks',sh);renderShort();
-    } else { alert('AI 返回为空，换个说法再试，或检查接口设置。'); }
-  }catch(e){ alert('拆分失败：'+e.message); }
+    steps=await aiSplit(title,hint);
+    if(!steps||!steps.length){ steps=localSplit(title,hint); note='没填 Key，已用本地模板拆分（填 Key 后用真 AI 更聪明）'; }
+  }catch(e){
+    steps=localSplit(title,hint); note='接口没通（'+String(e.message).slice(0,30)+'），已用本地模板拆分';
+  }
+  if(steps&&steps.length){
+    var sh=getShort();
+    steps.forEach(function(s){sh.push({id:'S'+Date.now()+Math.random().toString(36).slice(2,6),text:String(s).trim(),done:false});});
+    lsSet('adhd_shorttasks',sh);renderShort();
+    if(note) alert(note);
+  } else { alert('拆分失败，换个说法再试。'); }
   btn.disabled=false;btn.textContent='✨ 让 AI 拆成小步';
 });
 

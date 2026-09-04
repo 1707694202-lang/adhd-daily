@@ -209,6 +209,14 @@ label{font-size:14px;color:var(--sub);display:block;margin-top:8px;}
 .reward .tx{flex:1;font-size:15px;}
 .reward .tx b{color:var(--ok);}
 .muted{color:var(--sub);font-size:13px;}
+.feedback{margin-top:10px;}
+.fb-card{background:rgba(125,150,180,.14);border-radius:14px;padding:12px 14px;}
+.fb-sec{margin:6px 0;}
+.fb-sec b{color:#4a7ab0;}
+.fb-sec p{margin:4px 0 0;line-height:1.5;}
+.fb-q{margin:4px 0 0;padding-left:18px;}
+.fb-q li{margin:3px 0;line-height:1.5;}
+.fb-note{margin-top:8px;font-size:12px;opacity:.7;}
 .idle{display:flex;gap:10px;align-items:center;padding:12px;background:var(--bg);border-radius:12px;margin:8px 0;cursor:pointer;min-height:var(--tap);}
 .idle .ic{font-size:24px;}
 .idle .tx{flex:1;font-size:15px;}
@@ -709,6 +717,13 @@ input,textarea,select{background:rgba(255,255,255,.26);}
       <textarea id="diaNote" rows="2" placeholder="今天哪怕很小的一件进步…"></textarea>
       <button class="btn sm" id="diaAdd" style="margin-top:6px">加一条</button>
       <div id="diaItems" class="timeline" style="margin-top:10px"></div>
+      <hr class="soft" style="margin:14px 0">
+      <label>今天还发生了什么？（随便写几句，AI 会据此给你反馈）</label>
+      <textarea id="diaText" rows="3" placeholder="今天做了啥、有啥想法、心情为啥这样…想到啥写啥"></textarea>
+      <div class="row" style="gap:8px;margin-top:6px">
+        <button class="btn sm" id="diaFeedback">✨ 让 AI 给我反馈</button>
+      </div>
+      <div id="diaFeedbackOut" class="feedback"></div>
     </div>
 
     <div class="card">
@@ -1412,6 +1427,8 @@ function renderDiary(){
   keys.forEach(function(x){var r=diaries[x];var cnt=(r.items||[]).length;hh+='<div class="tl-item" data-d="'+x+'"><div class="d">'+x+' '+(r.mood||'')+(x===k?' · 正在看':'')+'</div><div class="t">'+(cnt?('小进步 ×'+cnt):'仅记了心情')+'</div></div>';});
   $('diaHistory').innerHTML=hh;
   $('diaHistory').querySelectorAll('.tl-item').forEach(function(el){el.addEventListener('click',function(){var p=el.dataset.d.split('-');diaryDate=new Date(+p[0],+p[1]-1,+p[2]);renderDiary();window.scrollTo(0,0);});});
+  if(document.activeElement!==$('diaText')) $('diaText').value=rec.text||'';
+  renderDiaFeedback(rec);
 }
 function diaAddItem(){
   var v=$('diaNote').value.trim();if(!v)return;
@@ -1423,9 +1440,67 @@ function diaSetMood(m){
   var diaries=getDiaries();var k=tkey(diaryDate);diaries[k]=diaries[k]||{items:[],mood:''};
   diaries[k].mood=m;lsSet('adhd_diaries',diaries);renderDiary();
 }
+function diaSaveText(){
+  var k=tkey(diaryDate);var diaries=getDiaries();diaries[k]=diaries[k]||{items:[],mood:''};
+  diaries[k].text=$('diaText').value;lsSet('adhd_diaries',diaries);
+}
+function renderDiaFeedback(rec){
+  var box=$('diaFeedbackOut');var f=rec&&rec.feedback;
+  if(!f){box.innerHTML='';return;}
+  var html='<div class="fb-card">';
+  html+='<div class="fb-sec"><b>💡 思考与建议</b><p>'+esc(f.reflection||'')+'</p></div>';
+  if(f.questions&&f.questions.length){
+    html+='<div class="fb-sec"><b>❓ 几个小问题</b><ul class="fb-q">'+f.questions.map(function(q){return '<li>'+esc(q)+'</li>';}).join('')+'</ul></div>';
+  }
+  if(f.local){html+='<div class="fb-note">（没填 AI key，这是本地模板反馈；在「⚙️ API 设置」填 key 后更聪明）</div>';}
+  html+='</div>';box.innerHTML=html;
+}
+async function aiDiaryFeedback(text,mood){
+  var cfg=getAI();if(!cfg||!cfg.key)return null;
+  var sys='你是一个温柔、懂 ADHD 的日记倾听者。根据用户写的今日日记，给一段简短的"思考与建议"（不超过 80 字，像朋友聊天、不评判、不空喊口号），再提 3 个简单好答的问题（每问不超过 20 字，帮用户多想一点）。只输出 JSON：{"reflection":"...","questions":["...","...","..."]}。不要 markdown、不要多余解释。';
+  var user='今天的日记：'+(text||'(没写文字)')+(mood?('\n心情：'+mood):'');
+  var base=(cfg&&cfg.base)||'https://api.deepseek.com/v1';
+  var model=(cfg&&cfg.model)||'deepseek-chat';
+  var url=base.replace(/\/+$/,'')+'/chat/completions';
+  var body={model:model,messages:[{role:'system',content:sys},{role:'user',content:user}],temperature:0.7};
+  var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify(body)});
+  if(!r.ok){var t=await r.text();throw new Error('接口返回 '+r.status+' '+t.slice(0,120));}
+  var j=await r.json();
+  var content=j.choices&&j.choices[0]&&j.choices[0].message?j.choices[0].message.content:'';
+  var m=content.match(/\{[\s\S]*\}/);var obj=null;
+  if(m){try{obj=JSON.parse(m[0]);}catch(e){obj=null;}}
+  if(!obj||!obj.reflection)obj={reflection:content.trim().slice(0,200),questions:[]};
+  return obj;
+}
+function localDiaryFeedback(text,mood){
+  var reflection,questions;
+  if(!text||!text.trim()){
+    reflection='今天还没写日记文字。睡前花两分钟，记一件今天发生的小事或一个念头，也很好。';
+  }else{
+    reflection='你今天愿意写下来，这本身就很棒。挑一件最让你在意的事，再多想一分钟——它真的有你想的那么重吗？';
+  }
+  questions=['今天哪件事让你最轻松？','有什么是你明天想不一样的？','现在身体累，还是脑子累？'];
+  if(mood==='😟'||mood==='😢'){questions=['要不要跟谁说一句今天不顺？','今晚做件让自己舒服的小事？','明天第一件小事定什么？'];}
+  if(mood==='😡'){questions=['刚才那股火，现在还在吗？','有没有哪个点是能放下的？','怎么让自己先松口气？'];}
+  return {reflection:reflection,questions:questions,local:true};
+}
 /* 日记日期切换 */
 $('diaToday').addEventListener('click',function(){diaryDate=new Date();renderDiary();closeDiaPicker();});
 $('diaAdd').addEventListener('click',diaAddItem);
+$('diaText').addEventListener('input',diaSaveText);
+$('diaFeedback').addEventListener('click',async function(){
+  var k=tkey(diaryDate);var text=$('diaText').value.trim();
+  if(!text){$('diaText').focus();return;}
+  diaSaveText();
+  var mood=(getDiaries()[k]||{}).mood||'';
+  var btn=$('diaFeedback');btn.disabled=true;btn.textContent='反馈中…';
+  var fb=null;
+  try{fb=await aiDiaryFeedback(text,mood);if(!fb||!fb.reflection){fb=localDiaryFeedback(text,mood);}}
+  catch(e){fb=localDiaryFeedback(text,mood);}
+  var diaries=getDiaries();diaries[k]=diaries[k]||{items:[],mood:''};diaries[k].feedback=fb;lsSet('adhd_diaries',diaries);
+  renderDiaFeedback(diaries[k]);
+  btn.disabled=false;btn.textContent='✨ 让 AI 给我反馈';
+});
 /* 迷你日历选择器：点日期弹本月小日历，‹ ›切月、« »切年，点日期选中 */
 var dpView={y:diaryDate.getFullYear(),m:diaryDate.getMonth()};
 function closeDiaPicker(){$('diaPicker').style.display='none';}

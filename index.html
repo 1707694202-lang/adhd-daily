@@ -1278,6 +1278,25 @@ function cn2num(s){var d={'零':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':
 function zhToDigits(s){return s.replace(/[零一二两三四五六七八九十百千]+/g,function(m){return String(cn2num(m));});}
 function parseBill(text){var items=[];if(!text)return items;text=text.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);});text=zhToDigits(text);text=text.replace(/毛/g,'角');var re=/([^块元圆0-9]*?)\s*(\d+(?:\.\d+)?)\s*(?:块|元|圆)\s*(?:(\d+)\s*(?:角|毛)?)?\s*(?:(\d+)\s*分)?/g;var m;while((m=re.exec(text))){if(m.index===re.lastIndex)re.lastIndex++;var name=(m[1]||'').trim().replace(/[，,。.、；;]+$/,'')||'未命名';var yuan=parseFloat(m[2])||0;var jiao=m[3]?parseFloat(m[3]):0;var fen=m[4]?parseFloat(m[4]):0;var amount=yuan+jiao/10+fen/100;if(!(amount>0))continue;items.push({name:name,amount:Math.round(amount*100)/100});}return items;}
 function autoCat(name){name=(name||'').toLowerCase();var rules=[[/饮料|奶茶|咖啡|茶|水|酒|饭|吃|餐|面|粥|包|蛋糕|外卖|食堂|火锅|烧烤|早餐|午餐|晚餐|夜宵|小吃|汉堡|炸鸡|麻辣|香锅|寿司/, '餐饮'],[/地铁|公交|出租|打车|车|油|高铁|火车|飞机|票|快递|停车|骑行|单车|摩的|网约车|顺风/, '交通'],[/书|课|学|笔|本|资料|文具|打印|考研|教材|笔记|班|证|考试|英语|四级|六级|教辅|习题/, '学习'],[/糖|巧克|饼干|薯片|坚果|辣条|果干|冰淇淋|雪糕|膨化|糖果|布丁|果冻|瓜子/, '零食']];for(var i=0;i<rules.length;i++){if(rules[i][0].test(name))return rules[i][1];}return '其他';}
+async function aiCategorize(names){
+  var cfg=getAI();if(!cfg||!cfg.key)return null;
+  if(!names||!names.length)return null;
+  var catList=LEDGER_CAT_KEYS.join('、');
+  var sys='你是记账分类助手。下面是一串消费项目的名称，请为每一项判断它属于哪个类别。类别只能从这一组里选：'+catList+'。尽量准确：吃饭喝的东西归餐饮，零食归零食，坐车出行归交通，买书上课归学习，实在分不清才归其他。只输出一个 JSON 数组，顺序与输入一致，每个元素是类别名字符串。例如 ["餐饮","交通"]。不要 markdown、不要解释。';
+  var user='项目：'+JSON.stringify(names);
+  var base=(cfg&&cfg.base)||'https://api.deepseek.com/v1';
+  var model=(cfg&&cfg.model)||'deepseek-chat';
+  var url=base.replace(/\/+$/,'')+'/chat/completions';
+  var body={model:model,messages:[{role:'system',content:sys},{role:'user',content:user}],temperature:0.2};
+  var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify(body)});
+  if(!r.ok){var t=await r.text();throw new Error('接口返回 '+r.status+' '+t.slice(0,120));}
+  var j=await r.json();
+  var content=j.choices&&j.choices[0]&&j.choices[0].message?j.choices[0].message.content:'';
+  var m=content.match(/\[[\s\S]*\]/);var arr=null;
+  if(m){try{arr=JSON.parse(m[0]);}catch(e){arr=null;}}
+  if(!arr||!Array.isArray(arr)||arr.length!==names.length)return null;
+  return arr.map(function(c,i){return LEDGER_CAT_KEYS.indexOf(c)>=0?c:autoCat(names[i]);});
+}
 var ledgerView=null; // null=看本月；否则查看的 'YYYY-MM'
 function getLedger(ym){ return lsGet(ledgerKeyOf(ym||realMonthStr()))||[]; }
 function renderLedgerCats(){ // 画分类标签
@@ -1359,18 +1378,25 @@ $('lgAdd').addEventListener('click',function(){
   var l=getLedger(realMonthStr()); l.push({date:tkey(), amount:a, cat:ledgerSel, note:name, src:ledgerSrc}); lsSet(ledgerKeyOf(realMonthStr()),l);
   $('lgName').value=''; $('lgAmount').value=''; ledgerView=null; renderLedger(); renderLedgerMonthBar();
 });
-$('lgAiAdd').addEventListener('click',function(){
+$('lgAiAdd').addEventListener('click',async function(){
+  var btn=$('lgAiAdd');
   var text=$('lgText').value.trim();
   if(!text){ $('lgText').focus(); return; }
   var items=parseBill(text);
   if(items.length===0){ $('lgAiPreview').innerHTML='<div class="muted">没识别到金额，换种写法试试，比如：蚊帐20块八 饮料三块二</div>'; return; }
+  btn.disabled=true; btn.textContent='识别中…';
+  var cats=null,usedLocal=false;
+  try{ cats=await aiCategorize(items.map(function(i){return i.name;})); if(!cats){usedLocal=true;} }catch(e){ usedLocal=true; }
+  if(usedLocal||!cats){ cats=items.map(function(i){return autoCat(i.name);}); }
   var ym=realMonthStr(); var cur=getLedger(ym);
   var added=[];
-  items.forEach(function(it){ var cat=autoCat(it.name); cur.push({date:tkey(), amount:it.amount, cat:cat, note:it.name, src:ledgerSrc, ai:true}); added.push(it.name+' ¥'+it.amount.toFixed(2)+'（'+cat+'）'); });
+  items.forEach(function(it,idx){ var cat=cats[idx]||autoCat(it.name); cur.push({date:tkey(), amount:it.amount, cat:cat, note:it.name, src:ledgerSrc, ai:true}); added.push(it.name+' ¥'+it.amount.toFixed(2)+'（'+cat+'）'); });
   lsSet(ledgerKeyOf(ym),cur);
   ledgerView=null; renderLedger(); renderLedgerMonthBar();
-  $('lgAiPreview').innerHTML='已识别添加 '+items.length+' 笔：<br>'+added.join('<br>');
+  var tail=usedLocal?'<br><span class="muted">（没填 AI key，用的本地分类）</span>':'';
+  $('lgAiPreview').innerHTML='已识别添加 '+items.length+' 笔：<br>'+added.join('<br>')+tail;
   $('lgText').value='';
+  btn.disabled=false; btn.textContent='识别并添加';
 });
 /* 旧数据迁移：把早期 adhd_exp 记的账并入按月的 adhd_ledger_YYYY-MM（只做一次，绝不删用户数据） */
 function migrateOldLedger(){

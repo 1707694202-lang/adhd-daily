@@ -538,13 +538,13 @@ input,textarea,select{background:rgba(255,255,255,.26);}
       <details class="ai-set">
         <summary>⚙️ API 设置（填一次，存在本机）</summary>
         <label>接口地址（Base URL，结尾不用加 /v1）</label>
-        <input id="aiBase" placeholder="https://generativelanguage.googleapis.com/v1beta/openai/">
-        <label>API Key（推荐用 Google Gemini 免费 Key）</label>
-        <input id="aiKey" type="password" placeholder="AIza... Google AI Studio 申请的免费 Key">
+        <input id="aiBase" placeholder="https://api.hunyuan.cloud.tencent.com/v1">
+        <label>API Key（推荐用腾讯云混元 key）</label>
+        <input id="aiKey" type="password" placeholder="从腾讯云控制台 API 密钥管理复制">
         <label>模型名</label>
-        <input id="aiModel" placeholder="gemini-2.0-flash">
+        <input id="aiModel" placeholder="hunyuan-lite">
         <button class="btn sm" id="aiSave" style="margin-top:6px">保存设置</button>
-        <div class="muted">已默认用 Gemini 免费接口，你只需填 Key 就能拆。Key 只存在你浏览器本地，不会上传。没有 Key 就无法拆。</div>
+        <div class="muted">已默认用腾讯混元 hunyuan-lite（免费模型）。Key 只存在你浏览器本地，不会上传。没有 Key 就无法拆。想用 Gemini/DeepSeek 可在上面手动改地址和模型名。</div>
       </details>
     </div>
 
@@ -1786,8 +1786,8 @@ async function aiSplit(title,hint){
   if(!cfg||!cfg.key){alert('先点开「⚙️ API 设置」填好接口地址和 Key');return null;}
   var sys='你是一个帮 ADHD 用户把大目标拆成极简可执行步骤的助手。只输出一个 JSON 数组，每个元素是一句极短的动作（不超过 15 个汉字），不要编号、不要解释、不要 markdown。';
   var user='请把这个目标拆成 4 到 8 个不可能失败的小步：'+title+(hint?('\n拆分要求：'+hint):'');
-  var base=(cfg&&cfg.base)||'https://generativelanguage.googleapis.com/v1beta/openai/';
-  var model=(cfg&&cfg.model)||'gemini-2.0-flash';
+  var base=(cfg&&cfg.base)||'https://api.hunyuan.cloud.tencent.com/v1';
+  var model=(cfg&&cfg.model)||'hunyuan-lite';
   var url=base.replace(/\/+$/,'')+'/chat/completions';
   var body={model:model,messages:[{role:'system',content:sys},{role:'user',content:user}],temperature:0.6};
   var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify(body)});

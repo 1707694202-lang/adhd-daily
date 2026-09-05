@@ -396,6 +396,16 @@ input,textarea,select{background:rgba(255,255,255,.26);}
 .ai-set{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;}
 .ai-set summary{cursor:pointer;font-size:13.5px;color:var(--brand);padding:4px 0;}
 .ai-set label{margin-top:8px;}
+.ai-modal-mask{position:fixed;inset:0;background:rgba(20,24,40,.38);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:60;padding:18px;}
+.ai-modal-mask.open{display:flex;}
+.ai-modal{max-width:420px;width:100%;background:rgba(255,255,255,.74);-webkit-backdrop-filter:blur(22px) saturate(1.4);backdrop-filter:blur(22px) saturate(1.4);border-radius:20px;padding:20px;box-shadow:0 18px 50px rgba(31,38,60,.22);border:1px solid rgba(255,255,255,.5);}
+[data-theme="dark"] .ai-modal{background:rgba(40,44,66,.82);border-color:rgba(255,255,255,.14);}
+.ai-modal h3{margin:0 0 4px;font-size:17px;}
+.ai-modal .muted{font-size:12.5px;margin-bottom:8px;line-height:1.5;}
+.ai-modal label{display:block;margin-top:10px;font-size:13px;color:var(--ink);}
+.ai-modal input{width:100%;margin-top:4px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.7);font-size:14px;box-sizing:border-box;}
+[data-theme="dark"] .ai-modal input{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.16);}
+.ai-modal .ai-actions{display:flex;gap:10px;margin-top:14px;}
 </style>
 </head>
 <body>
@@ -410,6 +420,7 @@ input,textarea,select{background:rgba(255,255,255,.26);}
             <button id="restoreBtn">📥 恢复数据</button>
             <button id="wallChooseBtn">🖼️ 更换壁纸</button>
             <button id="wallResetBtn">↺ 还原壁纸</button>
+            <button id="aiSetMenuBtn">⚙️ AI 设置</button>
           </span>
         </span>
         <input type="file" id="restoreFile" accept="application/json,.json" style="display:none">
@@ -417,6 +428,22 @@ input,textarea,select{background:rgba(255,255,255,.26);}
         <button id="themeBtn">换肤 ▾</button>
       </span>
     </h1>
+    <div class="ai-modal-mask" id="aiModalMask">
+      <div class="ai-modal" role="dialog" aria-modal="true">
+        <h3>⚙️ 填 AI Key（只存你本机）</h3>
+        <div class="muted">填一次，日记反馈 / 记账分类 / 目标拆分都用真 AI。Key 只存在你这个设备的浏览器里，不上传、不进代码。</div>
+        <label>接口地址（Base URL）</label>
+        <input id="aiBase" placeholder="https://api.deepseek.com/v1">
+        <label>API Key（从 platform.deepseek.com 的 API keys 页面复制）</label>
+        <input id="aiKey" type="password" placeholder="sk-...">
+        <label>模型名</label>
+        <input id="aiModel" placeholder="deepseek-chat">
+        <div class="ai-actions">
+          <button class="btn" id="aiSave" style="flex:1">保存设置</button>
+          <button class="btn sm" id="aiModalClose">取消</button>
+        </div>
+      </div>
+    </div>
     <div id="dailyQuote" class="daily-quote"></div>
     <div class="lace-deco" aria-hidden="true"></div>
     <div class="kitty-deco" aria-hidden="true"><svg viewBox="0 0 120 30" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="kittyPat" x="0" y="0" width="40" height="30" patternUnits="userSpaceOnUse"><path d="M10 13c-2-3-7-1-7 3 0 3 4 5 7 8 3-3 7-5 7-8 0-4-5-6-7-3z" fill="#ff9ec4"/><path d="M29 9 l5 4 l-5 4 z" fill="#ff5d7a"/><path d="M39 9 l-5 4 l5 4 z" fill="#ff5d7a"/><circle cx="34" cy="13" r="2" fill="#ff5d7a"/></pattern></defs><rect x="0" y="0" width="120" height="30" fill="url(#kittyPat)"/></svg></div>
@@ -543,17 +570,7 @@ input,textarea,select{background:rgba(255,255,255,.26);}
       <label>想怎么拆（给 AI 的提示，可留空走通用拆分）</label>
       <textarea id="ltHint" rows="2" placeholder="例：按周拆 / 先查政策再审材料 / 每天抽 1 小时"></textarea>
       <button class="btn" id="ltSplit" style="margin:8px 0">✨ 让 AI 拆成小步</button>
-      <details class="ai-set">
-        <summary>⚙️ API 设置（填一次，存在本机）</summary>
-        <label>接口地址（Base URL，结尾不用加 /v1）</label>
-        <input id="aiBase" placeholder="https://api.deepseek.com/v1">
-        <label>API Key（从 platform.deepseek.com 的 API keys 页面复制，只存你本机）</label>
-        <input id="aiKey" type="password" placeholder="从 platform.deepseek.com 的 API keys 页面复制">
-        <label>模型名</label>
-        <input id="aiModel" placeholder="deepseek-chat">
-        <button class="btn sm" id="aiSave" style="margin-top:6px">保存设置</button>
-        <div class="muted">已默认对接 DeepSeek。把 Key 粘进上面框、点「保存设置」，日记反馈和记账分类就会用真 AI；没填 Key 时用本地模板兜底。Key 只存在你浏览器本地，不会上传。</div>
-      </details>
+      <button class="btn sm" id="ltAiSetBtn" style="margin:4px 0 8px">⚙️ 填 AI Key（只存本机）</button>
     </div>
 
     <div class="card">
@@ -602,6 +619,7 @@ input,textarea,select{background:rgba(255,255,255,.26);}
           <button class="btn sm" id="lgAiAdd">识别并添加</button>
         </div>
         <div class="lg-ai-preview" id="lgAiPreview"></div>
+        <button class="btn sm" id="lgAiSetBtn" style="margin-top:8px;">⚙️ 还没填 AI Key？点这里填（填了「识别并添加」才用真 AI）</button>
       </div>
 
       <!-- ① 记一笔：花销名字 + 金额 + 分类 + 记一笔 -->
@@ -722,6 +740,7 @@ input,textarea,select{background:rgba(255,255,255,.26);}
       <textarea id="diaText" rows="3" placeholder="今天做了啥、有啥想法、心情为啥这样…想到啥写啥"></textarea>
       <div class="row" style="gap:8px;margin-top:6px">
         <button class="btn sm" id="diaFeedback">✨ 让 AI 给我反馈</button>
+        <button class="btn sm" id="diaAiSetBtn">⚙️ 填 AI Key</button>
       </div>
       <div id="diaFeedbackOut" class="feedback"></div>
     </div>
@@ -1881,7 +1900,12 @@ $('wkSave').addEventListener('click',function(){
 function getAI(){return lsGet('adhd_ai_cfg')||null;}
 function setAI(o){lsSet('adhd_ai_cfg',o);}
 function loadAICfg(){var c=getAI();if(!c)return;if(c.base)$('aiBase').value=c.base;if(c.key)$('aiKey').value=c.key;if(c.model)$('aiModel').value=c.model;}
-$('aiSave').addEventListener('click',function(){setAI({base:$('aiBase').value.trim(),key:$('aiKey').value.trim(),model:$('aiModel').value.trim()});alert('已保存 API 设置（只存在你本机）');});
+function openAiModal(){var c=getAI();if(c){if(c.base)$('aiBase').value=c.base;if(c.key)$('aiKey').value=c.key;if(c.model)$('aiModel').value=c.model;}else{$('aiBase').value='https://api.deepseek.com/v1';$('aiModel').value='deepseek-chat';}closeMoreMenu();$('aiModalMask').classList.add('open');}
+function closeAiModal(){$('aiModalMask').classList.remove('open');}
+['ltAiSetBtn','lgAiSetBtn','diaAiSetBtn','aiSetMenuBtn'].forEach(function(id){var b=$(id);if(b)b.addEventListener('click',function(e){e.stopPropagation();openAiModal();});});
+$('aiModalClose').addEventListener('click',closeAiModal);
+$('aiModalMask').addEventListener('click',function(e){if(e.target===this)closeAiModal();});
+$('aiSave').addEventListener('click',function(){setAI({base:$('aiBase').value.trim(),key:$('aiKey').value.trim(),model:$('aiModel').value.trim()});alert('已保存 AI 设置（只存在你本机）');closeAiModal();});
 async function aiSplit(title,hint){
   var cfg=getAI();
   if(!cfg||!cfg.key){return null;}

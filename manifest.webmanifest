@@ -1,0 +1,19 @@
+{
+  "name": "📝宇宸 · 每日小管家",
+  "short_name": "生活管家",
+  "description": "ADHD 日常生活管理：天气、今日日程、出门打包、习惯打卡、记账、日记、AI 拆分与反馈",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbfcfe",
+  "theme_color": "#fbfcfe",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -513,6 +513,7 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
         <input id="remText" placeholder="提醒我干嘛…" style="flex:1">
         <button class="btn sm" id="remAdd">＋</button>
       </div>
+      <label class="muted" style="display:flex;align-items:center;gap:6px;margin-top:6px"><input type="checkbox" id="remDaily" style="width:18px;height:18px"> 🔁 每天重复（勾上＝长期闹钟，一次导入后<b>每天都响</b>；改作息时回这里删掉重加）</label>
       <button class="btn" id="remSync" style="margin-top:8px;width:100%">📲 把今天的计划+提醒 同步成 iPhone 系统闹钟</button>
       <div class="muted" id="remSyncHint" style="margin-top:6px"></div>
       <div class="muted" id="offlineTip" style="margin-top:6px"></div>
@@ -1879,7 +1880,7 @@ function renderReminders(){
   var list=getReminders();
   if(!list.length){ $('remList').innerHTML='<div class="muted">还没有提醒。下面加一条，比如 21:30 吃维C。</div>'; return; }
   $('remList').innerHTML=list.map(function(r){
-    return '<div class="rem-row" data-id="'+esc(r.id)+'"><span class="rt">'+esc(r.time)+'</span><span class="rx">'+esc(r.text)+'</span><button class="rdel" data-del="'+esc(r.id)+'">✕</button></div>';
+    return '<div class="rem-row" data-id="'+esc(r.id)+'"><span class="rt">'+esc(r.time)+'</span><span class="rx">'+esc(r.text)+(r.daily?' <b>🔁每天</b>':'')+'</span><button class="rdel" data-del="'+esc(r.id)+'">✕</button></div>';
   }).join('');
   $('remList').querySelectorAll('.rdel').forEach(function(b){ b.addEventListener('click',function(){
     var id=b.dataset.del, arr=getReminders().filter(function(x){return x.id!==id;}); setReminders(arr); renderReminders();
@@ -1888,7 +1889,7 @@ function renderReminders(){
 $('remAdd').addEventListener('click',function(){
   var t=$('remTime').value, x=$('remText').value.trim();
   if(!t||!x){ if(!t)$('remTime').focus(); else $('remText').focus(); return; }
-  var arr=getReminders(); arr.push({id:'r'+Date.now(), time:t, text:x, fired:''}); setReminders(arr); renderReminders();
+  var arr=getReminders(); arr.push({id:'r'+Date.now(), time:t, text:x, fired:'', daily:!!$('remDaily').checked}); setReminders(arr); renderReminders();
   $('remTime').value=''; $('remText').value=''; $('remText').focus();
 });
 $('remText').addEventListener('keydown',function(e){ if(e.key==='Enter')$('remAdd').click(); });
@@ -1930,7 +1931,7 @@ function icsDT(d){ return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())
 function icsEscape(s){ return (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
 function buildICS(){
   var now=new Date(), events='';
-  function addEv(time, summary){
+  function addEv(time, summary, repeat){
     var p=time.split(':'); if(p.length<2)return; var h=+p[0], m=+p[1];
     if(isNaN(h)||isNaN(m))return;
     var start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
@@ -1938,10 +1939,11 @@ function buildICS(){
     events+='BEGIN:VEVENT\nUID:'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'@adhd-daily\n';
     events+='DTSTAMP:'+icsDT(new Date())+'Z\n';
     events+='DTSTART:'+icsDT(start)+'\nDTEND:'+icsDT(end)+'\n';
+    if(repeat) events+='RRULE:FREQ=DAILY\n';
     events+='SUMMARY:'+icsEscape(summary)+'\nBEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:'+icsEscape(summary)+'\nTRIGGER:-PT0M\nEND:VALARM\nEND:VEVENT\n';
   }
   getBlocks()[blkTypeToday()].forEach(function(b){ addEv(b.t, '🗓️ '+b.tx); });
-  getReminders().forEach(function(r){ addEv(r.time, '⏰ '+r.text); });
+  getReminders().forEach(function(r){ addEv(r.time, '⏰ '+r.text, !!r.daily); });
   return 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//adhd-daily//reminders//CN\nCALSCALE:GREGORIAN\n'+events+'END:VCALENDAR';
 }
 $('remSync').addEventListener('click',function(){

@@ -413,6 +413,17 @@ input,textarea,select{background:rgba(255,255,255,.26);}
 .ai-modal input{width:100%;margin-top:4px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.7);font-size:14px;box-sizing:border-box;}
 [data-theme="dark"] .ai-modal input{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.16);}
 .ai-modal .ai-actions{display:flex;gap:10px;margin-top:14px;}
+/* ============ 提醒 toast ============ */
+#remToast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-160%);z-index:9999;max-width:92vw;background:linear-gradient(135deg,#ff9ec4,#ffc2d6);color:#5a2540;padding:14px 18px;border-radius:16px;box-shadow:0 12px 34px rgba(214,51,110,.34);font-size:15px;font-weight:600;line-height:1.4;transition:transform .42s cubic-bezier(.2,0,.2,1);display:flex;align-items:center;gap:10px;pointer-events:none;}
+#remToast.show{transform:translateX(-50%) translateY(0);}
+#remToast .bell{font-size:22px;}
+.rem-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.5);margin-top:6px;}
+[data-theme="dark"] .rem-row{background:rgba(255,255,255,.08);}
+.rem-row .rt{font-variant-numeric:tabular-nums;font-weight:700;color:var(--brand2);min-width:48px;}
+.rem-row .rx{flex:1;font-size:14px;}
+.rem-row .rdel{background:none;border:none;color:#e0567f;font-size:18px;cursor:pointer;padding:0 4px;}
+input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.7);font-size:14px;box-sizing:border-box;color:var(--ink);}
+[data-theme="dark"] input[type=time]{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.16);}
 </style>
 </head>
 <body>
@@ -489,6 +500,21 @@ input,textarea,select{background:rgba(255,255,255,.26);}
         <button class="btn" id="catchGo" style="margin:2px 0">⚡ 计划乱了？从现在接上</button>
         <div id="catchList" style="margin-top:8px"></div>
       </div>
+    </div>
+
+    <div class="card" id="remCard">
+      <h2>⏰ 提醒 <span class="hint">到点弹窗 + 进 iPhone 日历</span>
+        <button class="btn sm ghost" id="remNotifBtn" style="margin-left:auto">🔔 开通知</button>
+      </h2>
+      <div class="muted">① 网页开着时到点会弹窗+响铃；② 点下面「同步到 iPhone 日历」，系统会在到点时弹<b>真正的系统通知</b>（哪怕网页关了）。</div>
+      <div id="remList" style="margin-top:8px"></div>
+      <div class="row" style="gap:8px;margin-top:8px">
+        <input id="remTime" type="time" style="flex:0 0 92px">
+        <input id="remText" placeholder="提醒我干嘛…" style="flex:1">
+        <button class="btn sm" id="remAdd">＋</button>
+      </div>
+      <button class="btn" id="remSync" style="margin-top:8px;width:100%">📲 把今天的时间块+提醒 同步进 iPhone 日历</button>
+      <div class="muted" id="remSyncHint" style="margin-top:6px"></div>
     </div>
 
     <div class="card">
@@ -1845,6 +1871,87 @@ $('blkSave').addEventListener('click',function(){
   $('blkModal').classList.remove('on'); renderBlocks();
 });
 
+/* ============ ⏰ 提醒（网页内弹窗 + 导出进 iPhone 日历） ============ */
+function getReminders(){ return lsGet('adhd_reminders')||[]; }
+function setReminders(a){ lsSet('adhd_reminders',a); }
+function renderReminders(){
+  var list=getReminders();
+  if(!list.length){ $('remList').innerHTML='<div class="muted">还没有提醒。下面加一条，比如 21:30 吃维C。</div>'; return; }
+  $('remList').innerHTML=list.map(function(r){
+    return '<div class="rem-row" data-id="'+esc(r.id)+'"><span class="rt">'+esc(r.time)+'</span><span class="rx">'+esc(r.text)+'</span><button class="rdel" data-del="'+esc(r.id)+'">✕</button></div>';
+  }).join('');
+  $('remList').querySelectorAll('.rdel').forEach(function(b){ b.addEventListener('click',function(){
+    var id=b.dataset.del, arr=getReminders().filter(function(x){return x.id!==id;}); setReminders(arr); renderReminders();
+  }); });
+}
+$('remAdd').addEventListener('click',function(){
+  var t=$('remTime').value, x=$('remText').value.trim();
+  if(!t||!x){ if(!t)$('remTime').focus(); else $('remText').focus(); return; }
+  var arr=getReminders(); arr.push({id:'r'+Date.now(), time:t, text:x, fired:''}); setReminders(arr); renderReminders();
+  $('remTime').value=''; $('remText').value=''; $('remText').focus();
+});
+$('remText').addEventListener('keydown',function(e){ if(e.key==='Enter')$('remAdd').click(); });
+
+/* 到点触发：弹窗 + 系统通知 + 响铃 */
+function showToast(msg){
+  var t=$('remToast'); if(!t){ t=document.createElement('div'); t.id='remToast'; document.body.appendChild(t); }
+  t.innerHTML='<span class="bell">🔔</span><span>'+esc(msg)+'</span>';
+  t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(function(){ t.classList.remove('show'); }, 6000);
+}
+function beep(){
+  try{ var C=window.AudioContext||window.webkitAudioContext; if(!C)return; var c=new C(); var o=c.createOscillator(), g=c.createGain();
+    o.connect(g); g.connect(c.destination); o.type='sine'; o.frequency.value=880; g.gain.value=0.001;
+    o.start(); g.gain.exponentialRampToValueAtTime(0.25,c.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.5);
+    o.stop(c.currentTime+0.5);
+  }catch(e){}
+}
+function fireReminder(text){
+  showToast('提醒：'+text); beep();
+  try{ if('Notification' in window && Notification.permission==='granted'){ new Notification('⏰ 提醒',{body:text}); } }catch(e){}
+}
+function checkReminders(){
+  var now=new Date(), hm=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2), today=tkey(), changed=false;
+  var arr=getReminders();
+  arr.forEach(function(r){ if(r.fired!==today && r.time && r.time<=hm){ r.fired=today; changed=true; fireReminder(r.text); } });
+  if(changed) setReminders(arr);
+}
+$('remNotifBtn').addEventListener('click',function(){
+  if(!('Notification' in window)){ alert('这个浏览器不支持系统通知，但网页开着仍会弹窗提醒。'); return; }
+  Notification.requestPermission().then(function(p){
+    $('remNotifBtn').textContent=(p==='granted')?'🔔 通知已开':'🔔 开通知';
+  });
+});
+
+/* 生成 .ics 并跳到 iPhone 日历（带 VALARM，系统到点弹通知） */
+function pad2(n){ return ('0'+n).slice(-2); }
+function icsDT(d){ return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+'T'+pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds()); }
+function icsEscape(s){ return (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+function buildICS(){
+  var now=new Date(), events='';
+  function addEv(time, summary){
+    var p=time.split(':'); if(p.length<2)return; var h=+p[0], m=+p[1];
+    if(isNaN(h)||isNaN(m))return;
+    var start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
+    var end=new Date(start.getTime()+15*60000);
+    events+='BEGIN:VEVENT\nUID:'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'@adhd-daily\n';
+    events+='DTSTAMP:'+icsDT(new Date())+'Z\n';
+    events+='DTSTART:'+icsDT(start)+'\nDTEND:'+icsDT(end)+'\n';
+    events+='SUMMARY:'+icsEscape(summary)+'\nBEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:'+icsEscape(summary)+'\nTRIGGER:-PT0M\nEND:VALARM\nEND:VEVENT\n';
+  }
+  getBlocks()[blkTypeToday()].forEach(function(b){ addEv(b.t, '🗓️ '+b.tx); });
+  getReminders().forEach(function(r){ addEv(r.time, '⏰ '+r.text); });
+  return 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//adhd-daily//reminders//CN\nCALSCALE:GREGORIAN\n'+events+'END:VCALENDAR';
+}
+$('remSync').addEventListener('click',function(){
+  var ics=buildICS();
+  var blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  $('remSyncHint').textContent='正在跳到 iPhone 日历… 在弹出的日历里点「添加全部」。若没自动弹出，可手动导入：把文件存到「文件」App 后打开它 → 添加到日历。';
+  setTimeout(function(){ window.location.href=url; }, 300);
+});
+
+
 /* ============ 出门打包清单 ============ */
 var DEFAULT_PACK=['工牌/学员证','耳机 QCY N65（机构不戴头戴降噪，要盯学生）','运动包（健身）','水壶','充电宝','防晒：帽子/遮阳伞（脂皮）','钥匙','手机'];
 function getPack(){ var p=lsGet('adhd_pack'); if(!p){ p=DEFAULT_PACK.slice(); lsSet('adhd_pack',p);} return p; }
@@ -2039,7 +2146,7 @@ $('ltSplit').addEventListener('click',async function(){
 /* ============ 初始化（放在末尾：所有数据常量与函数均已就绪） ============ */
 loadWx();renderPeri();renderHabits();renderAffirms();renderDiary();
 renderCourse();renderTodos();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderLedgerMonthBar();renderIdeas();
-renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();
+renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();renderReminders();checkReminders();setInterval(checkReminders,20000);
 var pcb=$('planCoachBtn'); if(pcb){pcb.addEventListener('click',function(){var u=pcb.dataset.pc; if(u&&u.indexOf('__')!==0&&u.trim()){window.open(u,'_blank');}else{alert('这个按钮还没填 PlanCoach 的打开链接，跟妮妮说一声就给你填上。');}});}
 applyWallpaper();loadAICfg();renderLong();renderShort();renderWeeklyReview();
 </script>

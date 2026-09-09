@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#fbfcfe">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="生活管家">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.png">
 <title>📝宇宸 · 每日小管家</title>
 <style>
 :root{
@@ -740,6 +747,7 @@ input,textarea,select{background:rgba(255,255,255,.26);}
       <textarea id="diaText" rows="3" placeholder="今天做了啥、有啥想法、心情为啥这样…想到啥写啥"></textarea>
       <div class="row" style="gap:8px;margin-top:6px">
         <button class="btn sm" id="diaFeedback">✨ 让 AI 给我反馈</button>
+        <button class="btn sm" id="diaSaveBtn">💾 保存日记</button>
         <button class="btn sm" id="diaAiSetBtn">⚙️ 填 AI Key</button>
       </div>
       <div id="diaFeedbackOut" class="feedback"></div>
@@ -1489,16 +1497,42 @@ function diaSaveText(){
   var k=tkey(diaryDate);var diaries=getDiaries();diaries[k]=diaries[k]||{items:[],mood:''};
   diaries[k].text=$('diaText').value;lsSet('adhd_diaries',diaries);
 }
+function diaSaveAnswer(i,v){
+  var k=tkey(diaryDate);var diaries=getDiaries();
+  if(!diaries[k]||!diaries[k].feedback)return;
+  diaries[k].feedback.answers=diaries[k].feedback.answers||[];
+  diaries[k].feedback.answers[i]=v;
+  lsSet('adhd_diaries',diaries);
+}
 function renderDiaFeedback(rec){
   var box=$('diaFeedbackOut');var f=rec&&rec.feedback;
   if(!f){box.innerHTML='';return;}
   var html='<div class="fb-card">';
   html+='<div class="fb-sec"><b>💡 思考与建议</b><p>'+esc(f.reflection||'')+'</p></div>';
   if(f.questions&&f.questions.length){
-    html+='<div class="fb-sec"><b>❓ 几个小问题</b><ul class="fb-q">'+f.questions.map(function(q){return '<li>'+esc(q)+'</li>';}).join('')+'</ul></div>';
+    html+='<div class="fb-sec"><b>❓ AI 的提问（已存档）</b><ul class="fb-q">'+f.questions.map(function(q){return '<li>'+esc(q)+'</li>';}).join('')+'</ul></div>';
+    html+='<div class="fb-sec"><b>✍️ 我的回复</b><div class="muted" style="margin:2px 0 8px">想到啥写啥，边打字边自动保存。</div>';
+    f.questions.forEach(function(q,i){
+      var a=(f.answers&&f.answers[i])||'';
+      html+='<div style="margin-bottom:10px"><div style="font-size:13px;margin-bottom:4px;opacity:.85">'+esc(q)+'</div>'
+          + '<textarea class="fb-ans" data-ai="'+i+'" rows="2" placeholder="我的回答…">'+esc(a)+'</textarea></div>';
+    });
+    html+='</div>';
   }
   if(f.local){html+='<div class="fb-note">（没填 AI key，这是本地模板反馈；在「⚙️ API 设置」填 key 后更聪明）</div>';}
+  var hist=(rec&&rec.fbHistory)||[];
+  if(hist.length){
+    html+='<div class="fb-sec"><b>🗂 往期问答（'+hist.length+' 条，不会被覆盖）</b><ul class="fb-q">';
+    hist.slice().reverse().forEach(function(h){
+      var qs=(h.questions||[]).map(function(q,j){var an=(h.answers&&h.answers[j])||'（没写）';return '<li>'+esc(q)+'<br><span style="opacity:.7">→ '+esc(an)+'</span></li>';}).join('');
+      html+='<li style="margin-bottom:8px"><span style="opacity:.6;font-size:12px">'+esc(h.at||'')+'</span><ul>'+qs+'</ul></li>';
+    });
+    html+='</ul></div>';
+  }
   html+='</div>';box.innerHTML=html;
+  box.querySelectorAll('.fb-ans').forEach(function(ta){
+    ta.addEventListener('input',function(){diaSaveAnswer(+ta.dataset.ai,ta.value);});
+  });
 }
 async function aiDiaryFeedback(text,mood){
   var cfg=getAI();if(!cfg||!cfg.key)return null;
@@ -1533,6 +1567,11 @@ function localDiaryFeedback(text,mood){
 $('diaToday').addEventListener('click',function(){diaryDate=new Date();renderDiary();closeDiaPicker();});
 $('diaAdd').addEventListener('click',diaAddItem);
 $('diaText').addEventListener('input',diaSaveText);
+$('diaSaveBtn').addEventListener('click',function(){
+  diaSaveText();
+  var b=$('diaSaveBtn');b.disabled=true;b.textContent='✓ 已保存';
+  setTimeout(function(){b.disabled=false;b.textContent='💾 保存日记';},1200);
+});
 $('diaFeedback').addEventListener('click',async function(){
   var k=tkey(diaryDate);var text=$('diaText').value.trim();
   if(!text){$('diaText').focus();return;}
@@ -1542,7 +1581,14 @@ $('diaFeedback').addEventListener('click',async function(){
   var fb=null;
   try{fb=await aiDiaryFeedback(text,mood);if(!fb||!fb.reflection){fb=localDiaryFeedback(text,mood);}}
   catch(e){fb=localDiaryFeedback(text,mood);}
-  var diaries=getDiaries();diaries[k]=diaries[k]||{items:[],mood:''};diaries[k].feedback=fb;lsSet('adhd_diaries',diaries);
+  var diaries=getDiaries();diaries[k]=diaries[k]||{items:[],mood:''};
+  var prev=diaries[k].feedback;
+  if(prev&&(prev.reflection||(prev.questions&&prev.questions.length))){
+    diaries[k].fbHistory=diaries[k].fbHistory||[];
+    diaries[k].fbHistory.push({at:new Date().toLocaleString('zh-CN',{hour12:false}),reflection:prev.reflection,questions:prev.questions,answers:prev.answers});
+  }
+  fb.answers=fb.answers||[];
+  diaries[k].feedback=fb;lsSet('adhd_diaries',diaries);
   renderDiaFeedback(diaries[k]);
   btn.disabled=false;btn.textContent='✨ 让 AI 给我反馈';
 });

@@ -503,17 +503,17 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
     </div>
 
     <div class="card" id="remCard">
-      <h2>⏰ 提醒 <span class="hint">到点弹窗 + 进 iPhone 日历</span>
+      <h2>⏰ 提醒 <span class="hint">到点响 · 可同步成系统闹钟</span>
         <button class="btn sm ghost" id="remNotifBtn" style="margin-left:auto">🔔 开通知</button>
       </h2>
-      <div class="muted">① 网页开着时到点会弹窗+响铃；② 点下面「同步到 iPhone 日历」，系统会在到点时弹<b>真正的系统通知</b>（哪怕网页关了）。</div>
+      <div class="muted">① 网页开着时到点会弹窗+响铃；② 点下面蓝色按钮，会把你今天的<b>计划时间块 + 提醒</b>全部变成 iPhone 系统闹钟——<b>锁屏、网页关掉也照响</b>（苹果不让网页直接建「时钟」App 的闹钟，所以走系统日历的闹钟，效果一样）。</div>
       <div id="remList" style="margin-top:8px"></div>
       <div class="row" style="gap:8px;margin-top:8px">
         <input id="remTime" type="time" style="flex:0 0 92px">
         <input id="remText" placeholder="提醒我干嘛…" style="flex:1">
         <button class="btn sm" id="remAdd">＋</button>
       </div>
-      <button class="btn" id="remSync" style="margin-top:8px;width:100%">📲 把今天的时间块+提醒 同步进 iPhone 日历</button>
+      <button class="btn" id="remSync" style="margin-top:8px;width:100%">📲 把今天的计划+提醒 同步成 iPhone 系统闹钟</button>
       <div class="muted" id="remSyncHint" style="margin-top:6px"></div>
     </div>
 

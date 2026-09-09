@@ -515,6 +515,7 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
       </div>
       <button class="btn" id="remSync" style="margin-top:8px;width:100%">📲 把今天的计划+提醒 同步成 iPhone 系统闹钟</button>
       <div class="muted" id="remSyncHint" style="margin-top:6px"></div>
+      <div class="muted" id="offlineTip" style="margin-top:6px"></div>
     </div>
 
     <div class="card">
@@ -2149,6 +2150,14 @@ renderCourse();renderTodos();renderFit();renderBooks();renderLedgerCats();migrat
 renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();renderReminders();checkReminders();setInterval(checkReminders,20000);
 var pcb=$('planCoachBtn'); if(pcb){pcb.addEventListener('click',function(){var u=pcb.dataset.pc; if(u&&u.indexOf('__')!==0&&u.trim()){window.open(u,'_blank');}else{alert('这个按钮还没填 PlanCoach 的打开链接，跟妮妮说一声就给你填上。');}});}
 applyWallpaper();loadAICfg();renderLong();renderShort();renderWeeklyReview();
+/* 离线支持：注册 Service Worker，装到主屏后没网也能打开 */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').then(function(){
+      var el=document.getElementById('offlineTip'); if(el)el.textContent='✅ 已开启离线：没网也能打开';
+    }).catch(function(){});
+  });
+}
 </script>
 </body>
 </html>

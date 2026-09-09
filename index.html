@@ -32,6 +32,23 @@
   --bg:#fff5f3; --card:#fffaf8; --ink:#5a3b3b; --sub:#a07b78; --line:#f3e2dd;
   --brand:#ff8fa3; --brand2:#ffb3c1; --ok:#4cae7e; --warn:#e8a33d; --bad:#e05a5a;
 }
+/* 奶油花园（cream）：底色米白奶油 #EDEDE4，主色浅豆绿 #B8CEC0，辅色低饱和淡粉 #F2D8E0 */
+[data-theme="cream"]{
+  --bg:#EDEDE4; --card:#F7F7F1; --ink:#454b42; --sub:#8b8d80; --line:#dcd9cb;
+  --brand:#B8CEC0; --brand2:#F2D8E0; --ok:#7FA08A; --warn:#d9b96a; --bad:#d98a8a;
+}
+/* 豆绿太浅，白字看不清 → 实心按钮/选中态用豆绿底配深色字；淡粉留给描边与次级按钮 */
+[data-theme="cream"] .btn,
+[data-theme="cream"] .tabs button.on,
+[data-theme="cream"] .chip.on,
+[data-theme="cream"] .dp-cell.dp-sel,
+[data-theme="cream"] .book.reading .st{background:#B8CEC0;color:#2f3a33;}
+[data-theme="cream"] .btn.ghost{background:transparent;color:#B08A9A;border:1px solid #F2D8E0;}
+[data-theme="cream"] .cal-cell.today{outline:2px solid #B8CEC0;}
+[data-theme="cream"] .tl-item{border-left:3px solid #F2D8E0;}
+[data-theme="cream"] .evt .ti{color:#7FA08A;}
+[data-theme="cream"] .dp-cell.dp-today{color:#7FA08A;}
+[data-theme="cream"] .topbar{background:rgba(237,237,228,.52);border-bottom-color:rgba(184,206,192,.45);}
 [data-theme="dark"]{
   --bg:#16181d; --card:#21242c; --ink:#e7eaef; --sub:#9aa3af; --line:#2e323b;
   --brand:#6f9bff; --brand2:#9b7cff; --ok:#43c98a; --warn:#e8b35a; --bad:#ff6b6b;
@@ -930,8 +947,8 @@ function cleanH2(h2){
   return c.textContent.trim();
 }
 /* 皮肤 */
-var THEMES=['light','peach','dark','lace','kitty'];
-var THEME_NAME={light:'简洁白',peach:'蜜桃粉',dark:'暗夜护眼',lace:'甜哥特',kitty:'凯蒂猫'};
+var THEMES=['light','peach','cream','dark','lace','kitty'];
+var THEME_NAME={light:'简洁白',peach:'蜜桃粉',cream:'奶油花园',dark:'暗夜护眼',lace:'甜哥特',kitty:'凯蒂猫'};
 (function(){var t=localStorage.getItem('adhd_theme')||'light';document.documentElement.dataset.theme=t;})();
 $('themeBtn').addEventListener('click',function(){
   var cur=document.documentElement.dataset.theme;var i=THEMES.indexOf(cur);var nx=THEMES[(i+1)%THEMES.length];

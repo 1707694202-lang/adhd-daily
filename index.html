@@ -620,9 +620,9 @@ input,textarea,select{background:rgba(255,255,255,.26);}
 
       <!-- 智能识别：一句话记多笔（中文金额也行） -->
       <div class="lg-ai" id="lgAi">
-        <div class="lg-ai-hint">一句话记多笔（中文金额也行）：<span class="muted">例：蚊帐20块八 饮料三块二 地铁5元</span></div>
+        <div class="lg-ai-hint">一句话记多笔（不写「元」也行）：<span class="muted">例：汉堡15 薯条8 地铁5元 饮料三块二</span></div>
         <div class="row" style="margin:6px 0">
-          <input id="lgText" placeholder="蚊帐20块八 饮料三块二 地铁5元" style="flex:1">
+          <input id="lgText" placeholder="汉堡15 薯条8 地铁5元" style="flex:1">
           <button class="btn sm" id="lgAiAdd">识别并添加</button>
         </div>
         <div class="lg-ai-preview" id="lgAiPreview"></div>
@@ -1303,7 +1303,38 @@ function monthAdd(ym,delta){ var p=ym.split('-'); var d=new Date(+p[0],+p[1]-1,1
 /* 一句话记多笔：中文数字/金额识别 + 自动分类 */
 function cn2num(s){var d={'零':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'百':100,'千':1000};var sec=0,num=0;for(var i=0;i<s.length;i++){var c=s[i];if(d[c]!==undefined){if(d[c]>=10){if(d[c]===10){if(num===0)num=1;sec+=num*10;num=0;}else if(d[c]===100){sec+=num*100;num=0;}else if(d[c]===1000){sec+=num*1000;num=0;}}else{num=d[c];}}}return sec+num;}
 function zhToDigits(s){return s.replace(/[零一二两三四五六七八九十百千]+/g,function(m){return String(cn2num(m));});}
-function parseBill(text){var items=[];if(!text)return items;text=text.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);});text=zhToDigits(text);text=text.replace(/毛/g,'角');var re=/([^块元圆0-9]*?)\s*(\d+(?:\.\d+)?)\s*(?:块|元|圆)\s*(?:(\d+)\s*(?:角|毛)?)?\s*(?:(\d+)\s*分)?/g;var m;while((m=re.exec(text))){if(m.index===re.lastIndex)re.lastIndex++;var name=(m[1]||'').trim().replace(/[，,。.、；;]+$/,'')||'未命名';var yuan=parseFloat(m[2])||0;var jiao=m[3]?parseFloat(m[3]):0;var fen=m[4]?parseFloat(m[4]):0;var amount=yuan+jiao/10+fen/100;if(!(amount>0))continue;items.push({name:name,amount:Math.round(amount*100)/100});}return items;}
+function parseBill(text){
+  var items=[];
+  if(!text) return items;
+  text=text.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);});
+  text=zhToDigits(text);
+  text=text.replace(/毛/g,'角');
+  // 1) 先按显式单位（块/元/圆）解析，保留「块八=0.8」等写法
+  var re=/([^块元圆0-9]*?)\s*(\d+(?:\.\d+)?)\s*(?:块|元|圆)\s*(?:(\d+)\s*(?:角|毛)?)?\s*(?:(\d+)\s*分)?/g;
+  var m; var rest=text;
+  while((m=re.exec(text))){
+    if(m.index===re.lastIndex) re.lastIndex++;
+    var name=(m[1]||'').trim().replace(/[，,。.、；;\s]+$/,'')||'未命名';
+    var yuan=parseFloat(m[2])||0;
+    var jiao=m[3]?parseFloat(m[3]):0;
+    var fen=m[4]?parseFloat(m[4]):0;
+    var amount=yuan+jiao/10+fen/100;
+    if(amount>0){
+      items.push({name:name,amount:Math.round(amount*100)/100});
+      rest=rest.replace(m[0],' ');
+    }
+  }
+  // 2) 兜底：没写「元/块/圆」的，按「名称+数字」直接把数字当金额（如 汉堡15）
+  var re2=/([^\d]+?)\s*(\d+(?:\.\d+)?)/g;
+  var mm;
+  while((mm=re2.exec(rest))){
+    if(mm.index===re2.lastIndex) re2.lastIndex++;
+    var nm=(mm[1]||'').trim().replace(/[，,。.、；;\s]+$/,'')||'未命名';
+    var v=parseFloat(mm[2]);
+    if(v>0) items.push({name:nm, amount:Math.round(v*100)/100});
+  }
+  return items;
+}
 function autoCat(name){name=(name||'').toLowerCase();var rules=[[/饮料|奶茶|咖啡|茶|水|酒|饭|吃|餐|面|粥|包|蛋糕|外卖|食堂|火锅|烧烤|早餐|午餐|晚餐|夜宵|小吃|汉堡|炸鸡|麻辣|香锅|寿司/, '餐饮'],[/地铁|公交|出租|打车|车|油|高铁|火车|飞机|票|快递|停车|骑行|单车|摩的|网约车|顺风/, '交通'],[/书|课|学|笔|本|资料|文具|打印|考研|教材|笔记|班|证|考试|英语|四级|六级|教辅|习题/, '学习'],[/糖|巧克|饼干|薯片|坚果|辣条|果干|冰淇淋|雪糕|膨化|糖果|布丁|果冻|瓜子/, '零食']];for(var i=0;i<rules.length;i++){if(rules[i][0].test(name))return rules[i][1];}return '其他';}
 async function aiCategorize(names){
   var cfg=getAI();if(!cfg||!cfg.key)return null;

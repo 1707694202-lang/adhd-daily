@@ -441,6 +441,18 @@ input,textarea,select{background:rgba(255,255,255,.26);}
 .rem-row .rdel{background:none;border:none;color:#e0567f;font-size:18px;cursor:pointer;padding:0 4px;}
 input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.7);font-size:14px;box-sizing:border-box;color:var(--ink);}
 [data-theme="dark"] input[type=time]{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.16);}
+
+/* ===== 纠结转盘 ===== */
+.spin-wrap{position:relative;width:min(100%,260px);margin:12px auto 10px;aspect-ratio:1/1;}
+.spin-wrap canvas{width:100%;height:100%;display:block;border-radius:50%;
+  box-shadow:0 6px 18px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.5);}
+.spin-needle{position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;
+  border-left:11px solid transparent;border-right:11px solid transparent;border-top:20px solid #e2708f;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.18));z-index:2;}
+[data-theme="dark"] .spin-needle{border-top-color:#f0a0b6;}
+.spin-result{text-align:center;font-size:17px;font-weight:700;margin-top:6px;color:var(--ink);line-height:1.6;}
+.spin-result .tiny{display:block;font-size:12px;font-weight:400;color:var(--sub);margin-top:2px;}
+#spinList{text-align:center;font-size:12px;word-break:break-all;}
 </style>
 </head>
 <body>
@@ -647,6 +659,27 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
 
   <!-- ============ 生活 ============ -->
   <div class="section" id="tab-life">
+    <div class="card">
+      <h2>🎡 纠结转盘 <span class="hint">AI 出题 or 自己填</span></h2>
+      <label>今天纠结啥？（一句话就行）</label>
+      <textarea id="spinInput" rows="2" placeholder="例：今天吃什么？／看哪部电影？／去哪玩？"></textarea>
+      <div class="row" style="margin:6px 0">
+        <button class="btn sm" id="spinAiBtn" style="flex:1">🪄 AI 帮我出题</button>
+        <button class="btn sm ghost" id="spinManualBtn" style="flex:1">✍️ 用我填的选项</button>
+      </div>
+      <div id="spinManualBox" style="display:none">
+        <textarea id="spinManualInput" rows="2" placeholder="已定选项，逗号或换行隔开：肠粉, 麻辣烫, 煲仔饭, 牛肉面"></textarea>
+        <button class="btn sm" id="spinManualOk" style="margin-top:6px;width:100%">用这些选项</button>
+      </div>
+      <div class="spin-wrap">
+        <canvas id="spinCanvas" width="600" height="600"></canvas>
+        <div class="spin-needle"></div>
+      </div>
+      <button class="btn" id="spinGo" style="width:100%">🎯 开始转！</button>
+      <div class="spin-result" id="spinResult">先让 AI 出题，或自己填几个选项 👆</div>
+      <div class="muted" id="spinList" style="margin-top:6px"></div>
+    </div>
+
     <div class="card">
       <h2>📚 阅读追踪 <span class="hint">读完自动进下一本</span></h2>
       <div id="readingNow"></div>
@@ -2306,12 +2339,123 @@ $('ltSplit').addEventListener('click',async function(){
   btn.disabled=false;btn.textContent='✨ 让 AI 拆成小步';
 });
 
+/* ============ 🎡 纠结转盘 ============ */
+var SPIN_DEF=['肠粉','麻辣烫','煲仔饭','牛肉面','沙县','粥铺','黄焖鸡','火锅'];
+function getSpin(){ return lsGet('adhd_spin')||{items:[],input:''}; }
+function saveSpin(o){ lsSet('adhd_spin',o); }
+function spinItems(){ var s=getSpin(); return (s.items&&s.items.length)?s.items:SPIN_DEF; }
+/* 低饱和配色：饱和度 32%、亮度 83%，柔和不刺眼 */
+function spinColor(i,n){ var h=Math.round((i*(360/n)+12)%360); return 'hsl('+h+',32%,83%)'; }
+var spinRot=0;
+function drawSpin(){
+  var c=$('spinCanvas'); if(!c||!c.getContext)return;
+  var ctx=null; try{ ctx=c.getContext('2d'); }catch(e){ ctx=null; }
+  if(!ctx)return;
+  var W=c.width, cx=W/2, cy=W/2, R=cx-8;
+  var items=spinItems(), n=items.length, step=2*Math.PI/n;
+  ctx.clearRect(0,0,W,W);
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(spinRot*Math.PI/180);
+  for(var i=0;i<n;i++){
+    ctx.beginPath(); ctx.moveTo(0,0);
+    ctx.arc(0,0,R,i*step-Math.PI/2,(i+1)*step-Math.PI/2);
+    ctx.closePath();
+    ctx.fillStyle=spinColor(i,n); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=3; ctx.stroke();
+    ctx.save();
+    ctx.rotate(i*step+step/2-Math.PI/2);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillStyle='#3b4240';
+    var t=String(items[i]); if(t.length>8)t=t.slice(0,8)+'…';
+    ctx.font='600 '+(n>7?32:38)+'px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText(t,R-26,0);
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(cx,cy,40,0,2*Math.PI);
+  ctx.fillStyle='#fff'; ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.08)'; ctx.lineWidth=3; ctx.stroke();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='44px -apple-system,"Apple Color Emoji","Segoe UI Emoji",sans-serif';
+  ctx.fillText('🎡',cx,cy+2);
+}
+function renderSpinList(){
+  var el=$('spinList'); if(!el)return;
+  var it=spinItems();
+  el.textContent='转盘上现在有 '+it.length+' 个：'+it.join(' · ');
+}
+function setSpinItems(arr){
+  if(!arr||!arr.length)return;
+  var s=getSpin(); s.items=arr.slice(0,12);
+  saveSpin(s); drawSpin(); renderSpinList();
+  $('spinResult').innerHTML='✅ 转盘换好了，点下面「开始转！」<span class="tiny">不满意就重新出题，或者自己填</span>';
+}
+function localSpinItems(q){
+  q=String(q||'');
+  if(/电影|剧|片|影视|综艺/.test(q))return {title:'看什么',items:['轻松喜剧','悬疑片','温暖老片','纪录片','动漫','综艺']};
+  if(/玩|娱乐|出去|逛|去哪|溜达/.test(q))return {title:'去哪玩',items:['商场逛逛','公园走一圈','海边吹风','书店待一下午','咖啡店坐坐','夜市吃小吃']};
+  if(/喝|奶茶|咖啡|甜/.test(q))return {title:'喝什么',items:['柠檬水','乌龙茶','拿铁','杨枝甘露','酸奶','气泡水']};
+  if(/吃|饭|餐|菜|宵夜/.test(q))return {title:'今天吃什么',items:['肠粉','麻辣烫','煲仔饭','牛肉面','沙县','粥铺','黄焖鸡','火锅']};
+  if(/学|背|练|做|干|写/.test(q))return {title:'先干哪件',items:['背 20 个单词','整理桌面','写三行日记','拉伸 10 分钟','看 10 页书','洗衣服']};
+  return {title:'今天做点啥',items:['出门走走','听一首新歌','写三行日记','整理一个角落','给朋友发条消息','看 10 页书']};
+}
+async function aiSpinItems(q){
+  var sys='你是帮 ADHD 用户做决定的转盘出题器。用户告诉你她纠结什么（比如"今天吃什么""看哪部电影""周末去哪玩"），你给出 6 到 8 个具体、现实能做到、彼此不重复的选项。要求：中文、每项不超过 8 个字、别写序号、别写解释、别重复。只输出 JSON：{"title":"今天吃什么","items":["肠粉","麻辣烫"]}，不要 markdown。';
+  var o=parseAIJSON(await aiPlanChat(sys,'她纠结的是：'+q));
+  if(!o||!o.items||!o.items.length)return null;
+  var items=o.items.map(function(x){return String(x).trim();}).filter(Boolean).slice(0,12);
+  return {title:String(o.title||'').trim(),items:items};
+}
+$('spinAiBtn').addEventListener('click',async function(){
+  var q=$('spinInput').value.trim();
+  if(!q){$('spinInput').focus();$('spinResult').textContent='先写一句你纠结啥，比如「今天吃什么？」';return;}
+  var s=getSpin(); s.input=q; saveSpin(s);
+  var btn=this; btn.disabled=true; btn.textContent='🪄 AI 出题…';
+  $('spinResult').textContent='AI 正在想选项（几秒）…';
+  var r=null, note='';
+  try{ r=await aiSpinItems(q); }catch(e){ note='AI 没连上（'+String(e.message).slice(0,30)+'），先给你一份常用选项。'; }
+  if(!r){ r=localSpinItems(q); if(!note)note='AI 没返回内容，先给你一份常用选项。'; }
+  setSpinItems(r.items);
+  if(note)$('spinResult').innerHTML=esc(note);
+  btn.disabled=false; btn.textContent='🪄 AI 帮我出题';
+});
+$('spinManualBtn').addEventListener('click',function(){
+  var box=$('spinManualBox');
+  box.style.display=(box.style.display==='none')?'block':'none';
+  if(box.style.display==='block')$('spinManualInput').focus();
+});
+$('spinManualOk').addEventListener('click',function(){
+  var raw=$('spinManualInput').value.trim();
+  var arr=raw.split(/[\n,，、;；]+/).map(function(x){return x.trim();}).filter(Boolean);
+  if(arr.length<2){alert('至少填 2 个选项，用逗号或换行隔开。');return;}
+  var s=getSpin(); s.input=($('spinInput').value.trim())||('已定：'+arr.join('、')); saveSpin(s);
+  setSpinItems(arr);
+  $('spinManualBox').style.display='none';
+});
+$('spinGo').addEventListener('click',function(){
+  var items=spinItems(), n=items.length, step=360/n;
+  if(n<2)return;
+  var btn=this, from=spinRot, target=spinRot+1440+Math.floor(Math.random()*360);
+  var dur=3600, t0=Date.now();
+  btn.disabled=true; btn.textContent='转啊转…';
+  $('spinResult').textContent='🎡 转起来了…';
+  (function frame(){
+    var p=Math.min(1,(Date.now()-t0)/dur), e=1-Math.pow(1-p,3);
+    spinRot=from+(target-from)*e; drawSpin();
+    if(p<1){ requestAnimationFrame(frame); return; }
+    spinRot=((target%360)+360)%360; drawSpin();
+    var idx=Math.floor(((((360-spinRot)%360)+360)%360)/step)%n;
+    $('spinResult').innerHTML='🎉 就它了：<b>'+esc(items[idx])+'</b><span class="tiny">转盘替你决定了，别再纠结，直接去做</span>';
+    btn.disabled=false; btn.textContent='🎯 再转一次';
+  })();
+});
+
 /* ============ 初始化（放在末尾：所有数据常量与函数均已就绪） ============ */
 loadWx();renderPeri();renderHabits();renderAffirms();renderDiary();
 renderCourse();renderTodos();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderLedgerMonthBar();renderIdeas();
 renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();renderReminders();checkReminders();setInterval(checkReminders,20000);
 var pcb=$('planCoachBtn'); if(pcb){pcb.addEventListener('click',function(){var u=pcb.dataset.pc; if(u&&u.indexOf('__')!==0&&u.trim()){window.open(u,'_blank');}else{alert('这个按钮还没填 PlanCoach 的打开链接，跟妮妮说一声就给你填上。');}});}
 applyWallpaper();loadAICfg();renderLong();renderShort();renderWeeklyReview();
+var sp=getSpin(); if(sp.input)$('spinInput').value=sp.input; drawSpin(); renderSpinList();
 /* 离线支持：注册 Service Worker，装到主屏后没网也能打开 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){

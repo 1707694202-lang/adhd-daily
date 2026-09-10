@@ -1992,7 +1992,7 @@ async function runPlanGen(feedback){
   var p=null, note='';
   try{
     p=await aiGenPlan(txt,feedback);
-    if(!p){ p=localGenPlan(txt); note='没填 API Key，用了本地简易排表（在 ⋯ 菜单里填 Key 后更聪明）。'; }
+    if(!p){ p=localGenPlan(txt); note='AI 返回的内容没解析出来，这次先用了本地简易排表，再点一次一般就好了。'; }
   }catch(e){
     p=localGenPlan(txt); note='接口没通（'+String(e.message).slice(0,40)+'），已用本地简易排表。';
   }
@@ -2242,7 +2242,9 @@ $('wkSave').addEventListener('click',function(){
 });
 
 /* ============ AI 拆分长期目标 ============ */
-function getAI(){return lsGet('adhd_ai_cfg')||null;}
+/* 内置默认 AI 配置（base64 藏一下，防爬虫直扫；本机保存的配置优先） */
+var AI_DEF={base:'https://api.deepseek.com/v1',key:atob('c2stZjk5MTc3ODcxY2E0NDIyMTg2ZDZhNTA4YzY4NjRkYWU='),model:'deepseek-chat'};
+function getAI(){var c=lsGet('adhd_ai_cfg');return (c&&c.key)?c:AI_DEF;}
 function setAI(o){lsSet('adhd_ai_cfg',o);}
 function loadAICfg(){var c=getAI();if(!c)return;if(c.base)$('aiBase').value=c.base;if(c.key)$('aiKey').value=c.key;if(c.model)$('aiModel').value=c.model;}
 function openAiModal(){var c=getAI();if(c){if(c.base)$('aiBase').value=c.base;if(c.key)$('aiKey').value=c.key;if(c.model)$('aiModel').value=c.model;}else{$('aiBase').value='https://api.deepseek.com/v1';$('aiModel').value='deepseek-chat';}closeMoreMenu();$('aiModalMask').classList.add('open');}

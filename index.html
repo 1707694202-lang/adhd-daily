@@ -509,6 +509,16 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
 
     <div class="card">
       <h2>🗓️ 今日时间块 <span class="hint" id="blkType">工作日</span> <button class="btn sm ghost" id="blkEdit" style="margin-left:auto">✎ 编辑</button></h2>
+      <div id="planWrap" style="margin:0 0 10px;border:1px dashed var(--line);border-radius:12px;padding:10px">
+        <div style="font-size:14px"><b>🪄 AI 帮我排今天</b> <span class="muted" style="font-size:12px">想到啥写啥，AI 排最优顺序</span></div>
+        <textarea id="planInput" rows="3" placeholder="我今天要做的，想到啥写啥：&#10;例：上午去政务大厅办证（要带身份证和照片），下午 4 点健身，晚上背 40 个单词，把转专业报名表交了"></textarea>
+        <div class="row" style="gap:8px;margin:6px 0 0">
+          <button class="btn" id="planGo" style="flex:1">🪄 AI 一键生成时间表</button>
+          <button class="btn ghost" id="planAdviceBtn">💡 修改意见</button>
+        </div>
+        <div class="muted" id="planStatus" style="font-size:12px;margin-top:4px"></div>
+        <div id="planAdviceBox" style="display:none;margin-top:8px"></div>
+      </div>
       <div class="tprog"><i id="blkBar"></i></div>
       <div class="muted" id="blkProg" style="margin:4px 0 8px">今天完成 0 / 0</div>
       <div id="blkList"></div>
@@ -1033,17 +1043,21 @@ function renderWx(d){
   $('wxOutfit').textContent='👕 '+getOutfit(tmax,tmin,precip,uv);
   lsSet('adhd_weather_cache',{d:JSON.stringify(d),t:Date.now()});
 }
+function wxFallback(){
+  var c=lsGet('adhd_weather_cache');
+  if(c){try{renderWx(JSON.parse(c.d));$('wxInfo').innerHTML+='<br><span class=muted>（显示的是上次缓存，本机双击打开即可联网刷新）</span>';return;}catch(e){}}
+  $('wxIco').textContent='🌂';$('wxTemp').textContent='--°';
+  $('wxInfo').innerHTML='<span style="color:var(--warn)">没联网或被预览窗口拦截。本机双击此文件用浏览器打开即可正常联网。先带把晴雨伞稳妥。</span>';
+  $('wxOutfit').textContent='👕 网络暂不可查，带把晴雨伞稳妥；高温别闷汗（脂皮）。';
+}
 function loadWx(){
   $('wxIco').textContent='⏳';$('wxTemp').textContent='--°';$('wxInfo').textContent='联网拉取中…';
-  fetch('https://api.open-meteo.com/v1/forecast?latitude='+WX.lat+'&longitude='+WX.lng+'&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,relative_humidity_2m_mean,uv_index_max,weather_code&timezone=Asia%2FShanghai&forecast_days=1')
-    .then(function(r){return r.json();})
-    .then(function(d){renderWx(d);})
-    .catch(function(){var c=lsGet('adhd_weather_cache');
-      if(c){try{renderWx(JSON.parse(c.d));$('wxInfo').innerHTML+='<br><span class=muted>（显示的是上次缓存，本机双击打开即可联网刷新）</span>';return;}catch(e){}}
-      $('wxIco').textContent='🌂';$('wxTemp').textContent='--°';
-      $('wxInfo').innerHTML='<span style="color:var(--warn)">没联网或被预览窗口拦截。本机双击此文件用浏览器打开即可正常联网。先带把晴雨伞稳妥。</span>';
-      $('wxOutfit').textContent='👕 网络暂不可查，带把晴雨伞稳妥；高温别闷汗（脂皮）。';
-    });
+  try{
+    fetch('https://api.open-meteo.com/v1/forecast?latitude='+WX.lat+'&longitude='+WX.lng+'&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,relative_humidity_2m_mean,uv_index_max,weather_code&timezone=Asia%2FShanghai&forecast_days=1')
+      .then(function(r){return r.json();})
+      .then(function(d){renderWx(d);})
+      .catch(wxFallback);
+  }catch(e){ wxFallback(); }
 }
 $('wRefresh').addEventListener('click',loadWx);
 
@@ -1888,6 +1902,133 @@ $('blkSave').addEventListener('click',function(){
   if(!arr.length){ alert('至少写一条，格式：时间 内容'); return; }
   var b=getBlocks(); b[type]=arr; lsSet('adhd_blocks',b);
   $('blkModal').classList.remove('on'); renderBlocks();
+});
+
+/* ============ 🪄 AI 一键排今日时间表 ============ */
+function getPlans(){ return lsGet('adhd_plans')||{}; }
+function savePlanToday(p){ var a=getPlans(); a[tkey()]=p; lsSet('adhd_plans',a); }
+var WEEK_CN=['日','一','二','三','四','五','六'];
+function planCtx(){
+  var n=new Date();
+  return '今天是'+n.getFullYear()+'年'+(n.getMonth()+1)+'月'+n.getDate()+'日 星期'+WEEK_CN[n.getDay()]+'，现在时间 '+('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2)+'。';
+}
+function currentPlanLines(){
+  var b=getBlocks(), type=blkTypeToday();
+  return (b[type]||[]).map(function(it){return it.t+' '+it.tx;}).join('\n')||'(空)';
+}
+async function aiPlanChat(sys,user){
+  var cfg=getAI();
+  if(!cfg||!cfg.key)return null;
+  var base=(cfg.base||'https://api.deepseek.com/v1').replace(/\/+$/,'');
+  var body={model:(cfg.model||'deepseek-chat'),messages:[{role:'system',content:sys},{role:'user',content:user}],temperature:0.5};
+  var r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify(body)});
+  if(!r.ok){var t=await r.text();throw new Error('接口返回 '+r.status+' '+t.slice(0,120));}
+  var j=await r.json();
+  return (j.choices&&j.choices[0]&&j.choices[0].message)?j.choices[0].message.content:'';
+}
+function parseAIJSON(content){
+  var m=String(content||'').match(/\{[\s\S]*\}/); if(!m)return null;
+  try{return JSON.parse(m[0]);}catch(e){return null;}
+}
+async function aiGenPlan(inputText,feedback){
+  var sys='你是 ADHD 用户的今日日程管家，把她"今天要做的事"排成一整天的最优时间表。规则：'
+  +'1. 只排当前时间之后的时段，已经过去的不排。'
+  +'2. 涉及线下办事（政务大厅/银行/医院/营业厅/派出所/学校部门等），按中国大陆常见对外办公时间安排（政务类一般工作日 9:00–12:00、14:00–17:30，中午休息），有窗口期的事优先卡窗口，并把要带的材料写进动作里。'
+  +'3. 综合所有事项排出最优顺序：有营业窗口的先卡窗口；同一片区域的挨着排别来回跑；费脑子的放上午；轻松的放晚上。'
+  +'4. 每个时间块的 tx 写成「标题：动作→动作→动作」的微小步骤，具体到先干什么，禁止写"学习""上班"这种大词。'
+  +'5. 块与块之间不留大段空白，用小事填满防走神，一直排到睡前，最后一块是 01:00 睡。'
+  +'只输出 JSON：{"blocks":[{"t":"09:00","tx":"起床：关闹钟→坐30秒→接温水"}],"notes":"要提醒用户的话（比如某办事处的营业时间建议出发前打电话确认），没有就空字符串"}，不要 markdown、不要多余解释。';
+  var user=planCtx()+'\n我今天要做的事：'+inputText;
+  if(feedback){ user+='\n\n我之前的时间表：\n'+currentPlanLines()+'\n\n请按我的要求调整重排：'+feedback; }
+  return parseAIJSON(await aiPlanChat(sys,user));
+}
+async function aiPlanAdvice(){
+  var sys='你是 ADHD 用户的日程顾问。她给你"今天要做的事"和"现在的时间表"，你挑出 3 到 5 条具体问题或更好的改法（顺序不对/错过办事窗口/来回跑冤枉路/排太满没歇/缺吃饭睡觉/漏了某件事/某块时间不现实），每条一句话并给具体改法（改到几点、怎么改），说人话别客套。只输出 JSON：{"advice":["...","..."]}，不要 markdown。';
+  var user=planCtx()+'\n我今天要做的事：'+(($('planInput').value.trim())||((getPlans()[tkey()]||{}).input)||'(没写)')
+    +'\n\n现在的时间表：\n'+currentPlanLines();
+  return parseAIJSON(await aiPlanChat(sys,user));
+}
+function localGenPlan(inputText){
+  var lines=inputText.split(/[\n；;]+/).map(function(s){return s.trim();}).filter(Boolean);
+  var now=new Date(), h=now.getHours()+(now.getMinutes()>20?1:0);
+  if(h<8)h=8; if(h>21)h=21;
+  var arr=[];
+  lines.forEach(function(ln,i){
+    arr.push({t:('0'+h).slice(-2)+':00',tx:ln});
+    h+=1;
+    if(h===12){arr.push({t:'12:00',tx:'午饭：吃点热乎的→别边吃边刷手机太久'});h=13;}
+  });
+  if(h<18){arr.push({t:('0'+h).slice(-2)+':00',tx:'自由填充：背 20 个词→多邻国 10 分钟'});}
+  arr.push({t:'19:00',tx:'晚饭：好好吃→吃完走两步'});
+  arr.push({t:'21:00',tx:'洗漱：刷牙外侧/内侧/咬合/舌苔→洗脸→护肤三步'});
+  arr.push({t:'22:00',tx:'睡前留白：复盘/听音频（防刷手机）'});
+  arr.push({t:'01:00',tx:'睡'});
+  return {blocks:arr,notes:''};
+}
+function localPlanAdvice(){
+  return {advice:[
+    '有线下办事的事尽量排上午——政务大厅中午常休息、下午人多。',
+    '在同一个地方办的事挨着排，别来回跑两趟。',
+    '睡前留白那格别刷手机，换成听音频或写日记。'
+  ]};
+}
+function applyPlan(p){
+  var arr=(p&&p.blocks||[]).filter(function(x){return x&&x.t&&x.tx;}).map(function(x){return {t:String(x.t).trim(),tx:String(x.tx).trim()};});
+  if(!arr.length){alert('AI 没返回有效的时间表，换句话再试一次。');return false;}
+  var type=blkTypeToday(), b=getBlocks();
+  if((b[type]||[]).length && !confirm('会覆盖当前时间表（周一到周六共用这一版），确定？'))return false;
+  b[type]=arr; lsSet('adhd_blocks',b);
+  var m=getBlockDone(), k=tkey();
+  for(var key in m[k]){ if(key.indexOf(type+'|')===0)delete m[k][key]; }
+  lsSet('adhd_blockdone',m);
+  renderBlocks();
+  return true;
+}
+async function runPlanGen(feedback){
+  var txt=$('planInput').value.trim()||((getPlans()[tkey()]||{}).input)||'';
+  if(!txt){$('planInput').focus();return;}
+  var btn=$('planGo'); btn.disabled=true; btn.textContent='🪄 排表中…';
+  $('planStatus').textContent='AI 正在排最优顺序（大概 10–30 秒）…';
+  var p=null, note='';
+  try{
+    p=await aiGenPlan(txt,feedback);
+    if(!p){ p=localGenPlan(txt); note='没填 API Key，用了本地简易排表（在 ⋯ 菜单里填 Key 后更聪明）。'; }
+  }catch(e){
+    p=localGenPlan(txt); note='接口没通（'+String(e.message).slice(0,40)+'），已用本地简易排表。';
+  }
+  if(applyPlan(p)){
+    savePlanToday({input:txt,notes:p.notes||''});
+    $('planStatus').innerHTML=(note?(esc(note)+'<br>'):'')+(p.notes?('📌 '+esc(p.notes)):'✅ 已排好，往下逐条打钩就行');
+    var box=$('planAdviceBox'); box.style.display='none'; box.dataset.loaded='';
+  }else{
+    $('planStatus').textContent='';
+  }
+  btn.disabled=false; btn.textContent='🪄 AI 一键生成时间表';
+}
+$('planGo').addEventListener('click',function(){runPlanGen('');});
+$('planAdviceBtn').addEventListener('click',async function(){
+  var box=$('planAdviceBox');
+  if(box.style.display!=='none'){
+    if(box.dataset.loaded==='1'){box.style.display='none';return;}
+  }
+  box.style.display='block';
+  if(box.dataset.loaded==='1')return;
+  box.innerHTML='<div class="muted">AI 正在看你的时间表…</div>';
+  var a=null;
+  try{ a=await aiPlanAdvice(); if(!a)a=localPlanAdvice(); }
+  catch(e){ a=localPlanAdvice(); }
+  var items=(a&&a.advice||[]).filter(Boolean);
+  var html=items.length
+    ? '<div style="font-size:13px;line-height:2">'+items.map(function(s){return '💡 '+esc(s);}).join('<br>')+'</div>'
+    : '<div class="muted">AI 没给出来，再点一次试试。</div>';
+  html+='<textarea id="planFb" rows="2" placeholder="想改哪里？例：办证改上午 / 健身挪到傍晚 / 太满了删点" style="margin-top:8px"></textarea>'
+    +'<button class="btn" id="planRedo" style="margin-top:6px;width:100%">🪄 按这个要求重新排</button>';
+  box.innerHTML=html; box.dataset.loaded='1';
+  $('planRedo').addEventListener('click',function(){
+    var fb=$('planFb').value.trim();
+    if(!fb){$('planFb').focus();return;}
+    runPlanGen(fb);
+  });
 });
 
 /* ============ ⏰ 提醒（网页内弹窗 + 导出进 iPhone 日历） ============ */

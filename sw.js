@@ -1,6 +1,6 @@
 /* 离线缓存：让网页装到主屏后，没网也能打开（就像真装的软件）
    每次改版本号就能让旧缓存自动失效 */
-var CACHE = 'adhd-v36';
+var CACHE = 'adhd-v37';
 
 var ASSETS = ['./', './index.html', './icon.png', './manifest.webmanifest'];
 

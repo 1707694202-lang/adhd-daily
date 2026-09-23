@@ -506,7 +506,19 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
   <!-- ============ 今日 ============ -->
   <div class="section on" id="tab-today">
     <div class="card">
-      <h2>🌤️ 天气 <span class="hint" id="wxLoc">深圳南山</span> <button class="btn sm ghost" id="wRefresh" style="margin-left:auto">🔄 刷新</button></h2>
+      <h2>🌤️ 天气 <button class="btn sm ghost" id="wxLoc" style="margin:0 6px 0 4px">深圳南山</button> <button class="btn sm ghost" id="wRefresh" style="margin-left:auto">🔄 刷新</button></h2>
+      <div id="wxLocBox" style="display:none;margin:6px 0 10px">
+        <div class="row" style="margin-bottom:6px">
+          <input id="wxCity" placeholder="输入城市名，如 茂名 / 深圳 / 广州" style="flex:1">
+          <button class="btn sm" id="wxCityBtn" style="flex:0 0 auto">用这个城市</button>
+        </div>
+        <div class="row" style="gap:6px;flex-wrap:wrap">
+          <button class="btn xs ghost" id="wxGeo">📍 用我手机定位</button>
+          <button class="btn xs ghost" data-city="深圳南山" data-lat="22.52" data-lng="113.93">深圳南山</button>
+          <button class="btn xs ghost" data-city="茂名·广东省" data-lat="21.66" data-lng="110.93">茂名</button>
+        </div>
+        <div class="muted" id="wxLocStatus" style="margin-top:4px"></div>
+      </div>
       <div class="wx">
         <div class="ico" id="wxIco">⏳</div>
         <div>
@@ -1054,6 +1066,7 @@ $('restoreFile').addEventListener('change',function(e){ if(e.target.files && e.t
 
 /* ============ 天气 ============ */
 var WX={lat:22.52,lng:113.93,loc:'深圳南山'};
+(function(){var s=lsGet('adhd_wx_loc');if(s&&s.lat){WX=s;}})();
 var WX_CODE={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️'};
 function getOutfit(tmax,tmin,precip,uv){
   var s=tmax+'° ';
@@ -1093,6 +1106,55 @@ function loadWx(){
   }catch(e){ wxFallback(); }
 }
 $('wRefresh').addEventListener('click',loadWx);
+
+/* ============ 天气位置切换（按定位/城市变化） ============ */
+function setWxLoc(name,lat,lng){
+  WX={lat:lat,lng:lng,loc:name};
+  lsSet('adhd_wx_loc',WX);
+  var el=$('wxLoc'); if(el)el.textContent=name;
+  var box=$('wxLocBox'); if(box)box.style.display='none';
+  var st=$('wxLocStatus'); if(st)st.textContent='';
+  loadWx();
+}
+var WX_CITIES={'深圳':[22.54,114.06],'茂名':[21.66,110.93],'广州':[23.13,113.26],'北京':[39.90,116.40],'上海':[31.23,121.47],'成都':[30.57,104.07],'杭州':[30.27,120.15],'武汉':[30.59,114.31],'西安':[34.34,108.94],'重庆':[29.56,106.55],'南京':[32.06,118.80],'长沙':[28.23,112.94],'厦门':[24.48,118.09],'珠海':[22.27,113.58],'佛山':[23.02,113.12],'东莞':[23.02,113.75],'香港':[22.32,114.17],'汕头':[23.35,116.68],'中山':[22.52,113.39]};
+function wxGeocode(name){
+  return fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(name)+'&count=1&language=zh&format=json')
+    .then(function(r){return r.json();})
+    .then(function(j){ if(j.results&&j.results[0]){var x=j.results[0]; return {name:x.name+(x.admin1&&x.admin1!==x.name?('·'+x.admin1):''),lat:x.latitude,lng:x.longitude};} return null; });
+}
+var wxLocBtn=$('wxLoc'); if(wxLocBtn){
+  wxLocBtn.addEventListener('click',function(){
+    var box=$('wxLocBox'); box.style.display=(box.style.display==='none')?'block':'none';
+  });
+}
+var wxCityBtn=$('wxCityBtn'); if(wxCityBtn){
+  wxCityBtn.addEventListener('click',async function(){
+    var name=$('wxCity').value.trim(); if(!name){$('wxCity').focus();return;}
+    $('wxLocStatus').textContent='正在查这个城市…';
+    try{
+      var r=await wxGeocode(name);
+      if(r){ setWxLoc(r.name,r.lat,r.lng); return; }
+    }catch(e){}
+    var fb=WX_CITIES[name.replace(/市|区|县|省/g,'')];
+    if(fb){ setWxLoc(name.replace(/市|区|县|省/g,''),fb[0],fb[1]); return; }
+    $('wxLocStatus').textContent='没查到这个城市，试试常用城市（深圳/茂名/广州…）或直接点「用我手机定位」。';
+  });
+}
+var wxGeo=$('wxGeo'); if(wxGeo){
+  wxGeo.addEventListener('click',function(){
+    if(!navigator.geolocation){$('wxLocStatus').textContent='这台设备不支持定位，点「深圳南山/茂名」按钮或填城市名。';return;}
+    $('wxLocStatus').textContent='正在请求定位（手机上点「允许」）…';
+    navigator.geolocation.getCurrentPosition(function(pos){
+      setWxLoc('我的位置',pos.coords.latitude,pos.coords.longitude);
+    },function(){ $('wxLocStatus').textContent='定位被拒绝或失败，手动填城市就行。'; });
+  });
+}
+Array.prototype.forEach.call(document.querySelectorAll('#wxLocBox [data-city]'),function(b){
+  b.addEventListener('click',function(){
+    var c=b.dataset.city,n=parseFloat(b.dataset.lat),g=parseFloat(b.dataset.lng);
+    setWxLoc(c,n,g);
+  });
+});
 
 /* ============ 生理期 ============ */
 function getPeriod(){return lsGet('adhd_period')||{cycles:[]};}
@@ -2451,6 +2513,7 @@ $('spinGo').addEventListener('click',function(){
 
 /* ============ 初始化（放在末尾：所有数据常量与函数均已就绪） ============ */
 loadWx();renderPeri();renderHabits();renderAffirms();renderDiary();
+(function(){var el=document.getElementById('wxLoc');if(el)el.textContent=WX.loc;})();
 renderCourse();renderTodos();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderLedgerMonthBar();renderIdeas();
 renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();renderReminders();checkReminders();setInterval(checkReminders,20000);
 var pcb=$('planCoachBtn'); if(pcb){pcb.addEventListener('click',function(){var u=pcb.dataset.pc; if(u&&u.indexOf('__')!==0&&u.trim()){window.open(u,'_blank');}else{alert('这个按钮还没填 PlanCoach 的打开链接，跟妮妮说一声就给你填上。');}});}

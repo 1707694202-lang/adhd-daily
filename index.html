@@ -741,6 +741,7 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
         <button class="btn xs" id="lgPrevM" type="button">‹ 上个月</button>
         <span id="lgMonthLabel" style="font-weight:600;margin:0 2px"></span>
         <button class="btn xs" id="lgNextM" type="button">下个月 ›</button>
+        <select id="lgMonthSel" class="btn xs" style="margin-left:6px;max-width:150px"></select>
         <button class="btn xs" id="lgBackM" type="button" style="display:none;margin-left:6px">回到本月</button>
       </div>
 
@@ -943,6 +944,7 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
 /* ============ 基础工具 ============ */
 function $(id){return document.getElementById(id);}
 function tkey(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function fmtTs(ts){ if(!ts) return ''; var d=new Date(ts); if(isNaN(d.getTime())) return ''; return (d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
 function lsSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -1461,12 +1463,20 @@ $('bookAdd').addEventListener('click',function(){var v=$('bookInput').value.trim
 
 /* ============ 记账（按月存档，键用 月份 如 adhd_ledger_2026-08） ============ */
 var LEDGER_BUDGET=2000; // 预算默认值，想改就改这个数字
-var LEDGER_CATS=[ // 5 个分类，每个一个颜色，顺序即占比横条顺序
-  {key:'餐饮',color:'#ff7eb3'},
-  {key:'交通',color:'#5bb8ff'},
-  {key:'学习',color:'#5fd08a'},
-  {key:'零食',color:'#ffc24d'},
-  {key:'其他',color:'#b58cff'}
+var LEDGER_CATS=[ // 13 个分类，每个一个颜色，顺序即占比横条顺序
+  {key:'餐饮',color:'#ff7a9a'},
+  {key:'交通',color:'#4db6ff'},
+  {key:'学习',color:'#57c98a'},
+  {key:'零食',color:'#ffb14e'},
+  {key:'日用',color:'#8c9eff'},
+  {key:'护肤美妆',color:'#ff8fc7'},
+  {key:'服饰',color:'#c084fc'},
+  {key:'娱乐',color:'#3dd6c4'},
+  {key:'社交人情',color:'#ff7a5c'},
+  {key:'医疗健康',color:'#ef6f9b'},
+  {key:'居住',color:'#a0d8b3'},
+  {key:'数码',color:'#5fd0e0'},
+  {key:'其他',color:'#b0a8c0'}
 ];
 var LEDGER_CAT_KEYS=LEDGER_CATS.map(function(c){return c.key;});
 var ledgerSel='餐饮'; // 当前选中的分类（默认餐饮）
@@ -1518,12 +1528,12 @@ function parseBill(text){
   }
   return items;
 }
-function autoCat(name){name=(name||'').toLowerCase();var rules=[[/饮料|奶茶|咖啡|茶|水|酒|饭|吃|餐|面|粥|包|蛋糕|外卖|食堂|火锅|烧烤|早餐|午餐|晚餐|夜宵|小吃|汉堡|炸鸡|麻辣|香锅|寿司/, '餐饮'],[/地铁|公交|出租|打车|车|油|高铁|火车|飞机|票|快递|停车|骑行|单车|摩的|网约车|顺风/, '交通'],[/书|课|学|笔|本|资料|文具|打印|考研|教材|笔记|班|证|考试|英语|四级|六级|教辅|习题/, '学习'],[/糖|巧克|饼干|薯片|坚果|辣条|果干|冰淇淋|雪糕|膨化|糖果|布丁|果冻|瓜子/, '零食']];for(var i=0;i<rules.length;i++){if(rules[i][0].test(name))return rules[i][1];}return '其他';}
+function autoCat(name){name=(name||'').toLowerCase();var rules=[[/护肤|化妆|口红|粉底|面膜|洗面奶|洁面|防晒|香水|美甲|睫毛|眉笔|眼影|精华|水乳|面霜|脂皮|皮炎|洗发|沐浴|身体乳|护手|卸妆/, '护肤美妆'],[/衣服|裤子|裙子|鞋|靴|背包|手提包|帽子|内衣|外套|卫衣|t恤|衬衫|袜子|围巾|配饰|穿戴|羽绒/, '服饰'],[/电影|游戏|会员|演出|演唱会|展览|密室|ktv|桌游|剧本杀|网吧|漫画|小说|视频|音乐|手游|网游|游乐|娱乐/, '娱乐'],[/请客|聚餐|送礼|生日|份子|红包|人情|请吃|请喝|随礼|乔迁|请客吃饭/, '社交人情'],[/药|医院|看病|挂号|体检|牙|诊所|医保|维生素|补剂|理疗|按摩|针灸|膏药/, '医疗健康'],[/房租|水电|物业|话费|网费|宿舍|床垫|台灯|收纳|清洁|洗衣|宽带|燃气/, '居住'],[/手机|耳机|充电器|数据线|平板|电脑|键盘|鼠标|软件|云盘|配件|内存|u盘|充电/, '数码'],[/饮料|奶茶|咖啡|茶|酒|米饭|吃饭|餐|面|粥|包子|面包|蛋糕|外卖|食堂|火锅|烧烤|早餐|午餐|晚餐|夜宵|小吃|汉堡|炸鸡|麻辣|香锅|寿司|肠粉/, '餐饮'],[/地铁|公交|出租|打车|车|油|高铁|火车|飞机|票|快递|停车|骑行|单车|摩的|网约车|顺风|地铁卡/, '交通'],[/书|课|学|笔|本|资料|文具|打印|考研|教材|笔记|班|证|考试|英语|四级|六级|教辅|习题/, '学习'],[/糖|巧克|饼干|薯片|坚果|辣条|果干|冰淇淋|雪糕|膨化|糖果|布丁|果冻|瓜子/, '零食']];for(var i=0;i<rules.length;i++){if(rules[i][0].test(name))return rules[i][1];}return '其他';}
 async function aiCategorize(names){
   var cfg=getAI();if(!cfg||!cfg.key)return null;
   if(!names||!names.length)return null;
   var catList=LEDGER_CAT_KEYS.join('、');
-  var sys='你是记账分类助手。下面是一串消费项目的名称，请为每一项判断它属于哪个类别。类别只能从这一组里选：'+catList+'。尽量准确：吃饭喝的东西归餐饮，零食归零食，坐车出行归交通，买书上课归学习，实在分不清才归其他。只输出一个 JSON 数组，顺序与输入一致，每个元素是类别名字符串。例如 ["餐饮","交通"]。不要 markdown、不要解释。';
+  var sys='你是记账分类助手。下面是一串消费项目的名称，请为每一项判断它属于哪个类别。类别只能从这一组里选：'+catList+'。\n分类标准：\n- 餐饮：吃饭喝的东西（饭、面、奶茶、咖啡、外卖、火锅，不含零食）\n- 交通：出行（地铁公交出租打车、高铁火车飞机、油费停车、快递运费）\n- 学习：书、课、资料、文具、打印、考试、教材、英语四级六级\n- 零食：零嘴（糖、饼干、薯片、坚果、辣条、冰淇淋、瓜子）\n- 日用：居家小物（纸巾、牙膏、洗衣液、垃圾袋、雨伞、杯子、毛巾、家居杂物）\n- 护肤美妆：护肤和化妆（洗面奶、防晒、面膜、口红、粉底、香水、美甲、脂皮相关）\n- 服饰：衣服鞋子包包配饰（衣裤裙鞋、背包、帽子、内衣、外套）\n- 娱乐：玩乐（电影、游戏、会员、演出、密室、KTV、桌游、漫画、视频音乐会员）\n- 社交人情：请客送礼（聚餐、送礼、生日、份子钱、红包、随礼）\n- 医疗健康：看病买药（药、医院、体检、牙、诊所、维生素、理疗）\n- 居住：住的相关（房租、水电、物业、话费、网费、宿舍用品、床垫、收纳）\n- 数码：电子设备配件（手机、耳机、充电器、平板、电脑、软件、云盘）\n- 其他：实在分不清的\n只输出一个 JSON 数组，顺序与输入一致，每个元素是类别名字符串。例如 ["餐饮","交通"]。不要 markdown、不要解释。';
   var user='项目：'+JSON.stringify(names);
   var base=(cfg&&cfg.base)||'https://api.deepseek.com/v1';
   var model=(cfg&&cfg.model)||'deepseek-chat';
@@ -1585,7 +1595,7 @@ function renderLedger(){
     var c=LEDGER_CATS.filter(function(x){return x.key===r.e.cat;})[0]||LEDGER_CATS[LEDGER_CATS.length-1];
     rh+='<div class="lg-recent-item">'
       +'<span class="dot" style="background:'+c.color+'"></span>'
-      +'<div class="tx"><b>'+esc(r.e.note||'未写名字')+'</b>'+(SRC_EMOJI[r.e.src]?' <span class="src">'+SRC_EMOJI[r.e.src]+'</span>':'')+' <span class="muted">'+esc(r.e.cat)+'</span></div>'
+      +'<div class="tx"><b>'+esc(r.e.note||'未写名字')+'</b>'+(SRC_EMOJI[r.e.src]?' <span class="src">'+SRC_EMOJI[r.e.src]+'</span>':'')+' <span class="muted">'+esc(r.e.cat)+'</span>'+(r.e.ts?(' <span class="muted">· '+fmtTs(r.e.ts)+'</span>'):(r.e.date?' <span class="muted">· '+r.e.date.replace(/-/g,'/')+'</span>':''))+'</div>'
       +'<b class="amt">¥'+(parseFloat(r.e.amount)||0).toFixed(2)+'</b>'
       +'<span class="x" data-i="'+r.idx+'">✕</span>'
       +'</div>';
@@ -1594,6 +1604,7 @@ function renderLedger(){
   $('lgRecent').querySelectorAll('.x').forEach(function(x){x.addEventListener('click',function(){
     var arr=getLedger(ledgerView); arr.splice(+x.dataset.i,1); lsSet(ledgerKeyOf(ledgerView||realMonthStr()),arr); renderLedger();
   });});
+  renderLedgerMonthSel();
 }
 /* 月份切换条：更新标签 + 回到本月按钮显隐 */
 function renderLedgerMonthBar(){
@@ -1604,6 +1615,20 @@ function renderLedgerMonthBar(){
 $('lgPrevM').addEventListener('click',function(){ var view=ledgerView||realMonthStr(); ledgerView=monthAdd(view,-1); renderLedger(); renderLedgerMonthBar(); });
 $('lgNextM').addEventListener('click',function(){ var view=ledgerView||realMonthStr(); var nx=monthAdd(view,1); ledgerView=(nx===realMonthStr())?null:nx; renderLedger(); renderLedgerMonthBar(); });
 $('lgBackM').addEventListener('click',function(){ ledgerView=null; renderLedger(); renderLedgerMonthBar(); });
+function allLedgerMonths(){
+  var months=[];
+  try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); var m=k&&k.match(/^adhd_ledger_(\d{4}-\d{2})$/); if(m){ var arr=lsGet(k)||[]; if(arr.length) months.push(m[1]); } } }catch(e){}
+  months.push(realMonthStr());
+  months=Array.from(new Set(months)).sort().reverse();
+  return months;
+}
+function renderLedgerMonthSel(){
+  var sel=$('lgMonthSel'); if(!sel) return;
+  var months=allLedgerMonths();
+  var cur=ledgerView||realMonthStr();
+  sel.innerHTML=months.map(function(m){ return '<option value="'+m+'"'+(m===cur?' selected':'')+'>'+m.replace('-','年')+'月'+(m===realMonthStr()?'（本月）':'')+'</option>'; }).join('');
+}
+$('lgMonthSel').addEventListener('change',function(){ ledgerView=this.value; renderLedger(); renderLedgerMonthBar(); renderLedgerMonthSel(); });
 function ledgerTip(byCat,total,left){ // 永远不指责
   if(total<=0) return '这个月还没开始记账，想起来就记一笔，不急。';
   var maxKey='', maxV=0;
@@ -1616,7 +1641,7 @@ function ledgerTip(byCat,total,left){ // 永远不指责
 $('lgAdd').addEventListener('click',function(){
   var a=parseFloat($('lgAmount').value); if(!(a>0)){ $('lgAmount').focus(); return; }
   var name=$('lgName').value.trim();
-  var l=getLedger(realMonthStr()); l.push({date:tkey(), amount:a, cat:ledgerSel, note:name, src:ledgerSrc}); lsSet(ledgerKeyOf(realMonthStr()),l);
+  var l=getLedger(realMonthStr()); l.push({date:tkey(), ts:Date.now(), amount:a, cat:ledgerSel, note:name, src:ledgerSrc}); lsSet(ledgerKeyOf(realMonthStr()),l);
   $('lgName').value=''; $('lgAmount').value=''; ledgerView=null; renderLedger(); renderLedgerMonthBar();
 });
 $('lgAiAdd').addEventListener('click',async function(){
@@ -1631,7 +1656,7 @@ $('lgAiAdd').addEventListener('click',async function(){
   if(usedLocal||!cats){ cats=items.map(function(i){return autoCat(i.name);}); }
   var ym=realMonthStr(); var cur=getLedger(ym);
   var added=[];
-  items.forEach(function(it,idx){ var cat=cats[idx]||autoCat(it.name); cur.push({date:tkey(), amount:it.amount, cat:cat, note:it.name, src:ledgerSrc, ai:true}); added.push(it.name+' ¥'+it.amount.toFixed(2)+'（'+cat+'）'); });
+  items.forEach(function(it,idx){ var cat=cats[idx]||autoCat(it.name); cur.push({date:tkey(), ts:Date.now(), amount:it.amount, cat:cat, note:it.name, src:ledgerSrc, ai:true}); added.push(it.name+' ¥'+it.amount.toFixed(2)+'（'+cat+'）'); });
   lsSet(ledgerKeyOf(ym),cur);
   ledgerView=null; renderLedger(); renderLedgerMonthBar();
   var tail=usedLocal?'<br><span class="muted">（没填 AI key，用的本地分类）</span>':'';

@@ -537,6 +537,31 @@ details[open]>.fold-sum::after{transform:rotate(180deg);}
 .hw-badge.ok{background:rgba(87,201,138,.18);color:#2f9b62;}
 .hw-empty{color:var(--sub);font-size:13px;padding:8px 0;}
 .cal-cell .hdot{position:absolute;top:2px;right:2px;font-size:10px;line-height:1;z-index:2;}
+
+/* ===== 健身进步格子墙 ===== */
+.fit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px;margin:8px 0;}
+.fit-cell{position:relative;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.3);min-height:84px;display:flex;flex-direction:column;justify-content:flex-end;padding:8px;cursor:pointer;overflow:hidden;transition:transform .15s;}
+.fit-cell:active{transform:scale(.94);}
+.fit-cell b{font-size:14px;position:relative;z-index:2;text-shadow:0 1px 2px rgba(255,255,255,.8);}
+.fit-cell span{font-size:11px;color:var(--sub);position:relative;z-index:2;text-shadow:0 1px 2px rgba(255,255,255,.8);}
+.fit-cell.has-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;}
+.fit-g-empty{color:var(--sub);font-size:13px;padding:10px 0;}
+.fit-detail{border:1px dashed var(--line);border-radius:12px;padding:10px;margin-top:8px;font-size:14px;}
+[data-theme="dark"] .fit-cell{background:rgba(255,255,255,.08);}
+[data-theme="dark"] .fit-cell b,[data-theme="dark"] .fit-cell span{text-shadow:0 1px 2px rgba(0,0,0,.8);}
+
+/* ===== 记账分类筛选条 ===== */
+.lg-filter{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.lg-filter::-webkit-scrollbar{display:none;}
+.lg-filter button{flex:0 0 auto;border:1px solid var(--line);background:rgba(255,255,255,.34);color:var(--ink);font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;min-height:30px;white-space:nowrap;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+.lg-filter button.on{background:var(--pri);color:#fff;border-color:transparent;}
+.lg-filter button:active{transform:scale(.94);}
+[data-theme="dark"] .lg-filter button{background:rgba(255,255,255,.09);}
+[data-theme="dark"] .lg-filter button.on{background:var(--pri);}
+.lg-fold-sum{cursor:pointer;list-style:none;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13.5px;color:var(--ink);display:flex;align-items:center;gap:6px;}
+.lg-fold-sum::-webkit-details-marker{display:none;}
+.lg-fold-sum::after{content:'▾';margin-left:auto;color:var(--sub);transition:transform .2s;}
+details[open]>.lg-fold-sum::after{transform:rotate(180deg);}
 </style>
 </head>
 <body>
@@ -590,11 +615,11 @@ details[open]>.fold-sum::after{transform:rotate(180deg);}
       <button data-to="cardHw" data-tab="study">📌作业</button>
       <button data-to="cardTodo" data-tab="study">✅Todo</button>
       <button data-to="cardCourse" data-tab="study">📐课程</button>
-      <button data-to="cardBooks" data-tab="life">📚书架</button>
+      <button data-to="cardBooks" data-tab="study">📚书架</button>
       <button data-to="cardLedger" data-tab="life">💰记账</button>
       <button data-to="cardSpin" data-tab="life">🎡转盘</button>
       <button data-to="cardCal" data-tab="cal">📅日历</button>
-      <button data-to="cardDiary" data-tab="cal">📝日记</button>
+      <button data-to="cardDiary" data-tab="today">📝日记</button>
     </div>
   </div>
 
@@ -709,6 +734,46 @@ details[open]>.fold-sum::after{transform:rotate(180deg);}
       </details>
     </div>
 
+    <div class="card fold-card" id="cardDiary">
+      <details id="diaryFold">
+        <summary class="fold-sum"><h2>📝 日记 <span class="hint">点开写今天 / 翻以前</span></h2></summary>
+        <div class="fold-body">
+          <div class="cal-head">
+            <button class="btn sm" id="diaDateBtn"><span class="mo" id="diaDate"></span> ▾</button>
+            <button class="btn sm ghost" id="diaToday" style="margin-left:auto">回到今天</button>
+          </div>
+          <div class="dia-picker" id="diaPicker" style="display:none">
+            <div class="dp-head">
+              <button class="dp-nav" id="dpYearPrev" title="上一年">«</button>
+              <button class="dp-nav" id="dpMonthPrev" title="上个月">‹</button>
+              <span class="dp-title" id="dpTitle"></span>
+              <button class="dp-nav" id="dpMonthNext" title="下个月">›</button>
+              <button class="dp-nav" id="dpYearNext" title="下一年">»</button>
+            </div>
+            <div class="dp-grid" id="dpGrid"></div>
+          </div>
+          <div class="muted">点表情选当天心情（只记那一天，不覆盖历史）。</div>
+          <div class="moodrow" id="moodRow"></div>
+          <label>今晚的睡前小进步（写一行，按回车就记下，可写多条）</label>
+          <textarea id="diaNote" rows="2" placeholder="今天哪怕很小的一件进步…写完按回车"></textarea>
+          <div id="diaItems" class="timeline" style="margin-top:10px"></div>
+          <hr class="soft" style="margin:14px 0">
+          <label>今天还发生了什么？（随便写几句，AI 会据此给你反馈）</label>
+          <textarea id="diaText" rows="3" placeholder="今天做了啥、有啥想法、心情为啥这样…想到啥写啥"></textarea>
+          <div class="row" style="gap:8px;margin-top:6px">
+            <button class="btn sm" id="diaFeedback">✨ 让 AI 给我反馈</button>
+            <button class="btn sm" id="diaSaveBtn">💾 保存日记</button>
+            <button class="btn sm" id="diaAiSetBtn">⚙️ 填 AI Key</button>
+          </div>
+          <div id="diaFeedbackOut" class="feedback"></div>
+          <details id="diaryHistFold" style="margin-top:14px">
+            <summary class="muted" style="cursor:pointer">📚 日记历史 · 点开看以前（点某天回看 / 修改）</summary>
+            <div id="diaHistory" class="timeline" style="margin-top:8px"></div>
+          </details>
+        </div>
+      </details>
+    </div>
+
   </div>
 
   <!-- ============ 学业 ============ -->
@@ -752,6 +817,21 @@ details[open]>.fold-sum::after{transform:rotate(180deg);}
       <div class="muted" style="font-size:12px;margin-top:8px">标了截止日的作业，会在「日历」那天的格子上出现一个 📌 小标志，点那天能看到。</div>
     </div>
 
+    <div class="card" id="cardBooks">
+      <h2>📚 我的书架 <span class="hint">读过的书 · 点开看进度</span></h2>
+      <div id="bookshelf"></div>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">＋ 加书 / 管理（收起细节）</summary>
+      <div id="readingNow" style="margin-top:8px"></div>
+      <label>加一本（默认进待读）</label>
+      <div class="row">
+        <input id="bookInput" placeholder="书名…" style="flex:1">
+        <button class="btn sm" id="bookAdd">加</button>
+      </div>
+      <div id="readingTodo"></div>
+      <div id="readingDone"></div>
+      </details>
+    </div>
+
     <div class="card" id="cardLong">
       <h2>🗂️ 代办级 · 长期目标 <span class="hint">放一时做不完的事</span></h2>
       <div id="longList"></div>
@@ -791,21 +871,6 @@ details[open]>.fold-sum::after{transform:rotate(180deg);}
       <div class="spin-result" id="spinResult">先让 AI 出题，或自己填几个选项 👆</div>
       <div class="muted" id="spinList" style="margin-top:6px"></div>
         </div>
-      </details>
-    </div>
-
-    <div class="card" id="cardBooks">
-      <h2>📚 我的书架 <span class="hint">读过的书 · 点开看进度</span></h2>
-      <div id="bookshelf"></div>
-      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">＋ 加书 / 管理（收起细节）</summary>
-      <div id="readingNow" style="margin-top:8px"></div>
-      <label>加一本（默认进待读）</label>
-      <div class="row">
-        <input id="bookInput" placeholder="书名…" style="flex:1">
-        <button class="btn sm" id="bookAdd">加</button>
-      </div>
-      <div id="readingTodo"></div>
-      <div id="readingDone"></div>
       </details>
     </div>
 
@@ -854,8 +919,12 @@ details[open]>.fold-sum::after{transform:rotate(180deg);}
       <div class="lg-detail" id="lgDetail"></div>
       <div class="lg-src-sum" id="lgSrcSum"></div>
 
-      <!-- ③ 最近记的（带名字，方便回忆；轻量卡片，不是表格） -->
-      <div class="lg-recent" id="lgRecent"></div>
+      <!-- ③ 最近记的（默认折叠 · 点开看 · 分类筛选像微信账单） -->
+      <details id="lgRecentFold" style="margin-top:4px">
+        <summary class="lg-fold-sum">🧾 <span id="lgRecentCount">明细（0 笔）</span>· 点开看</summary>
+        <div class="lg-filter" id="lgFilter" style="margin-top:8px"></div>
+        <div class="lg-recent" id="lgRecent"></div>
+      </details>
 
       <!-- ④ 温柔提醒 -->
       <div class="ledger-tip" id="ledgerTip"></div>
@@ -871,27 +940,24 @@ details[open]>.fold-sum::after{transform:rotate(180deg);}
       <div id="ideaList"></div>
     </div>
 
-    <div class="card">
-      <h2>💪 健身 & 体态 <span class="hint">私教 · 围度 · 对比照</span></h2>
+    <div class="card" id="cardFit">
+      <h2>💪 健身 & 体态 <span class="hint">拍照记录 · 每次进步</span></h2>
       <div id="fitPeri" class="banner warn" style="display:none">经期中：今天自动隐藏健身块、已休息。别熬夜追剧，会加重脂皮出油。</div>
       <div class="banner">脂皮提醒：出汗及时擦干别闷；高温 / 经期别熬夜追剧（加重出油）。物理防晒优先帽子 / 遮阳伞。</div>
       <label>今日体重 (kg)</label>
       <input id="fitWeight" type="number" step="0.1" placeholder="例如 52.3">
-      <label>围度（腰 / 臂 / 腿 cm，逗号分隔）</label>
-      <input id="fitMeasure" placeholder="例如 68, 26, 52">
       <label>私教动作 / 今日训练</label>
       <textarea id="fitTrain" rows="2" placeholder="例：弹力带划船 3×15、侧平举 3×12"></textarea>
+      <label>📷 拍一张（可选 · 手机点这里直接开相机）</label>
+      <input id="fitPhoto" type="file" accept="image/*" capture="environment" style="width:100%">
       <button class="btn sm" id="fitSave" style="margin-top:8px">保存今日记录</button>
       <div class="stat" id="fitStat"></div>
-      <label>圆肩驼背 · 前后对比照</label>
-      <div class="row">
-        <select id="fitPhotoType" style="width:auto">
-          <option value="before">before（刚开始）</option>
-          <option value="after">after（最新）</option>
-        </select>
-        <input id="fitPhoto" type="file" accept="image/*" style="flex:1">
-      </div>
-      <div class="photo-row" id="fitPhotos"></div>
+      <label>每一次的进步（点格子看那天的照片和记录）</label>
+      <div class="fit-grid" id="fitGrid"></div>
+      <div id="fitDetail"></div>
+      <details style="margin-top:12px"><summary class="muted" style="cursor:pointer">🖼 旧的前后对比照（存档）</summary>
+        <div class="photo-row" id="fitPhotos" style="margin-top:8px"></div>
+      </details>
     </div>
   </div>
 
@@ -914,55 +980,18 @@ details[open]>.fold-sum::after{transform:rotate(180deg);}
           <button class="btn sm" id="impSave">导入</button>
         </div>
       </details>
-    </div>
-
-    <div class="card">
-      <h2><svg class="heart-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.6-10-9.2C.3 8.4 1.9 4.8 5.5 4.8c1.9 0 3.1 1.1 4.5 2.8 1.4-1.7 2.6-2.8 4.5-2.8 3.6 0 5.2 3.6 3.5 6C19.5 15.4 12 20 12 20z" fill="#e05a5a"/></svg> 生理期日历 <span class="hint">标经期，自动联动</span></h2>
-      <label>本次开始日</label>
-      <input id="periStart" type="date">
-      <label>持续几天（默认 5）</label>
-      <input id="periLen" type="number" value="5">
-      <button class="btn sm" id="periAdd" style="margin-top:8px">标记这次经期</button>
-      <div id="periList" class="muted" style="margin-top:10px"></div>
-    </div>
-
-    <div class="card" id="cardDiary">
-      <h2>📝 每日日记 <span class="hint">心情 + 睡前小进步，自动按日期存档</span></h2>
-      <div class="cal-head">
-        <button class="btn sm" id="diaDateBtn"><span class="mo" id="diaDate"></span> ▾</button>
-        <button class="btn sm ghost" id="diaToday" style="margin-left:auto">回到今天</button>
-      </div>
-      <div class="dia-picker" id="diaPicker" style="display:none">
-        <div class="dp-head">
-          <button class="dp-nav" id="dpYearPrev" title="上一年">«</button>
-          <button class="dp-nav" id="dpMonthPrev" title="上个月">‹</button>
-          <span class="dp-title" id="dpTitle"></span>
-          <button class="dp-nav" id="dpMonthNext" title="下个月">›</button>
-          <button class="dp-nav" id="dpYearNext" title="下一年">»</button>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer"><svg class="heart-ico" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px"><path d="M12 20s-7.5-4.6-10-9.2C.3 8.4 1.9 4.8 5.5 4.8c1.9 0 3.1 1.1 4.5 2.8 1.4-1.7 2.6-2.8 4.5-2.8 3.6 0 5.2 3.6 3.5 6C19.5 15.4 12 20 12 20z" fill="#e05a5a"/></svg> 生理期 · 点击展开记录 <span class="hint">标经期，自动联动</span></summary>
+        <div style="padding-top:10px">
+          <label>本次开始日</label>
+          <input id="periStart" type="date">
+          <label>持续几天（默认 5）</label>
+          <input id="periLen" type="number" value="5">
+          <button class="btn sm" id="periAdd" style="margin-top:8px">标记这次经期</button>
+          <div id="periList" class="muted" style="margin-top:10px"></div>
         </div>
-        <div class="dp-grid" id="dpGrid"></div>
-      </div>
-      <div class="muted">点上面的表情选当天的心情（只记那一天，不会覆盖历史）。</div>
-      <div class="moodrow" id="moodRow"></div>
-      <label>今晚的睡前小进步（想写几条就写几条，每条点一下「加一条」）</label>
-      <textarea id="diaNote" rows="2" placeholder="今天哪怕很小的一件进步…"></textarea>
-      <button class="btn sm" id="diaAdd" style="margin-top:6px">加一条</button>
-      <div id="diaItems" class="timeline" style="margin-top:10px"></div>
-      <hr class="soft" style="margin:14px 0">
-      <label>今天还发生了什么？（随便写几句，AI 会据此给你反馈）</label>
-      <textarea id="diaText" rows="3" placeholder="今天做了啥、有啥想法、心情为啥这样…想到啥写啥"></textarea>
-      <div class="row" style="gap:8px;margin-top:6px">
-        <button class="btn sm" id="diaFeedback">✨ 让 AI 给我反馈</button>
-        <button class="btn sm" id="diaSaveBtn">💾 保存日记</button>
-        <button class="btn sm" id="diaAiSetBtn">⚙️ 填 AI Key</button>
-      </div>
-      <div id="diaFeedbackOut" class="feedback"></div>
+      </details>
     </div>
 
-    <div class="card">
-      <h2>📚 日记历史 <span class="hint">点任意一天回看 / 修改</span></h2>
-      <div id="diaHistory" class="timeline"></div>
-    </div>
   </div>
 
   <div class="section" id="tab-week">
@@ -1589,33 +1618,101 @@ function renderFit(){
   if(w.length){
     var last=w[w.length-1];
     html+='<div class="stat"><div class="s"><b>'+(last.w||'-')+'</b><span>最新体重kg</span></div>'
-      +'<div class="s"><b>'+w.length+'</b><span>已记天数</span></div>'
-      +'<div class="s"><b>'+(last.m||'-')+'</b><span>围度 腰/臂/腿</span></div></div>';
+      +'<div class="s"><b>'+w.length+'</b><span>已记次数</span></div>'
+      +'<div class="s"><b>'+countFitPhotos()+'</b><span>拍照记录</span></div></div>';
   }
   $('fitStat').innerHTML=html;
-  // photos
+  renderFitGrid();
+  // 旧对比照（存档展示）
   idbGetAll().then(function(all){
+    var olds=all.filter(function(p){return p.type==='before'||p.type==='after';});
     var row='';
-    all.slice().reverse().forEach(function(p){
+    olds.slice().reverse().forEach(function(p){
       row+='<div style="position:relative"><img class="photo" src="'+p.data+'" alt="'+p.type+'"><div class="muted" style="text-align:center">'+p.type+'</div><div class="x" data-pid="'+p.id+'" style="position:absolute;top:0;right:0;color:var(--bad);cursor:pointer">✕</div></div>';
     });
-    $('fitPhotos').innerHTML=row||'<div class="muted">还没传对比照。</div>';
+    $('fitPhotos').innerHTML=row||'<div class="muted">还没有旧对比照。</div>';
     $('fitPhotos').querySelectorAll('.x').forEach(function(x){x.addEventListener('click',function(){idbDel(x.dataset.pid).then(renderFit);});});
   });
 }
+function countFitPhotos(){
+  var f=getFit();var n=0;(f.weights||[]).forEach(function(x){if(x.pid)n++;});
+  return n;
+}
+/* ===== 进步格子墙：每次记录一格，点开看详情 ===== */
+function renderFitGrid(){
+  var f=getFit();var w=(f.weights||[]).slice().reverse();
+  var g=$('fitGrid');if(!g)return;
+  if(!w.length){g.innerHTML='<div class="fit-g-empty">还没有记录。练完一次，上面填好点「保存今日记录」，格子就会亮一格。</div>';$('fitDetail').innerHTML='';return;}
+  var html='';
+  w.forEach(function(x,i){
+    html+='<div class="fit-cell'+(x.pid?' has-photo':'')+'" data-i="'+i+'">'
+      +(x.pid?'<img alt=""/>':'')
+      +'<b>'+(x.w?x.w+'kg':'—')+'</b>'
+      +'<span>'+String(x.d).slice(5).replace('-','/')+'</span></div>';
+  });
+  g.innerHTML=html;
+  /* 照片缩略图：pid 存的是 IndexedDB 的 id，异步补图 */
+  idbGetAll().then(function(all){
+    var map={};all.forEach(function(p){map[p.id]=p;});
+    g.querySelectorAll('.fit-cell').forEach(function(c){
+      var rec=w[+c.dataset.i];
+      if(rec&&rec.pid&&map[rec.pid]){
+        var img=c.querySelector('img');if(img)img.src=map[rec.pid].data;
+      }
+    });
+  });
+  g.querySelectorAll('.fit-cell').forEach(function(c){
+    c.addEventListener('click',function(){showFitDetail(w[+c.dataset.i]);});
+  });
+}
+function showFitDetail(rec){
+  var d=$('fitDetail');if(!d||!rec)return;
+  var html='<div class="fit-detail"><b>'+rec.d+'</b>'
+    +(rec.w?' · 体重 '+rec.w+'kg':'')
+    +(rec.tr?'<div class="muted" style="margin-top:4px">训练：'+esc(rec.tr)+'</div>':'')
+    +(rec.m?'<div class="muted" style="margin-top:2px">围度（旧）：'+esc(rec.m)+'</div>':'')
+    +'<div id="fitDetailImg" style="margin-top:8px"><span class="muted">照片读取中…</span></div>'
+    +'</div>';
+  d.innerHTML=html;
+  if(rec.pid){
+    idbGetAll().then(function(all){
+      var p=all.filter(function(x){return x.id===rec.pid;})[0];
+      var box=$('fitDetailImg');
+      if(box){box.innerHTML=p?('<img src="'+p.data+'" style="max-width:100%;border-radius:12px"/>'):'<span class="muted">这张照片已被删。</span>';}
+    });
+  }else{
+    var box2=$('fitDetailImg');if(box2)box2.innerHTML='';
+  }
+}
 $('fitSave').addEventListener('click',function(){
   var f=getFit();f.weights=f.weights||[];
-  var w=$('fitWeight').value.trim(),m=$('fitMeasure').value.trim(),tr=$('fitTrain').value.trim();
-  if(w||m){f.weights.push({d:tkey(),w:w,m:m});}
-  if(tr){f.train=tr;}
-  lsSet('adhd_fit',f);
-  // photo
+  var w=$('fitWeight').value.trim(),tr=$('fitTrain').value.trim();
   var file=$('fitPhoto').files[0];
+  if(!w&&!tr&&!file){alert('写个体重或训练内容再保存嘛～');return;}
+  var doSave=function(pid){
+    var k=tkey();
+    var f2=getFit();f2.weights=f2.weights||[];
+    var idx=-1;f2.weights.forEach(function(x,i){if(x.d===k)idx=i;});
+    var rec=idx>=0?f2.weights[idx]:{d:k};
+    if(w)rec.w=w;
+    if(tr)rec.tr=tr;
+    if(pid)rec.pid=pid;
+    if(idx>=0)f2.weights[idx]=rec;else f2.weights.push(rec);
+    if(tr)f2.train=tr;
+    lsSet('adhd_fit',f2);
+    renderFit();
+  };
   if(file){
-    var rd=new FileReader();rd.onload=function(){idbPut({id:Date.now(),type:$('fitPhotoType').value,data:rd.result}).then(renderFit);};
-    rd.readAsDataURL(file);$('fitPhoto').value='';
+    var rd=new FileReader();
+    rd.onload=function(){
+      var pid=Date.now();
+      idbPut({id:pid,d:tkey(),data:rd.result}).then(function(){doSave(pid);});
+    };
+    rd.readAsDataURL(file);
+    $('fitPhoto').value='';
+  }else{
+    doSave(null);
   }
-  renderFit();
 });
 
 /* ============ 阅读追踪 ============ */
@@ -1793,6 +1890,7 @@ async function aiCategorize(names){
   return arr.map(function(c,i){return LEDGER_CAT_KEYS.indexOf(c)>=0?c:autoCat(names[i]);});
 }
 var ledgerView=null; // null=看本月；否则查看的 'YYYY-MM'
+var lgFilterCat='全部'; // 明细分类筛选（像微信账单那样只看某类）
 function getLedger(ym){ return lsGet(ledgerKeyOf(ym||realMonthStr()))||[]; }
 function renderLedgerCats(){ // 画分类标签
   var html=''; LEDGER_CATS.forEach(function(c){
@@ -1832,10 +1930,23 @@ function renderLedger(){
   // ④ 温柔提醒
   if(view===realMonthStr()){ $('ledgerTip').textContent=ledgerTip(byCat,total,left); }
   else { $('ledgerTip').textContent='这是 '+view.replace('-','年')+'月 的账，看看就好～哪笔记错了点 ✕ 就能删。'; }
-  // ③ 最近记的（带名字，倒序，可删除，帮助回忆花在哪）
+  // ③ 最近记的（默认折叠 · 分类筛选 · 像微信账单那样只看某类）
+  $('lgRecentCount').textContent='明细（'+list.length+' 笔）';
   var rec=list.slice().reverse().map(function(e,idx){return {e:e, idx:list.length-1-idx};});
+  /* 分类筛选条：全部 + 有记录的类目（带该类小计） */
+  var fh='<button data-c="全部" class="'+(lgFilterCat==='全部'?'on':'')+'">全部 '+list.length+'</button>';
+  LEDGER_CATS.forEach(function(c){
+    var n=list.filter(function(e){return e.cat===c.key;}).length;
+    if(n>0){ var amt=list.filter(function(e){return e.cat===c.key;}).reduce(function(a,e){return a+(parseFloat(e.amount)||0);},0);
+      fh+='<button data-c="'+c.key+'" class="'+(lgFilterCat===c.key?'on':'')+'">'+c.key+' '+n+'笔 ¥'+amt.toFixed(0)+'</button>'; }
+  });
+  $('lgFilter').innerHTML=fh;
+  $('lgFilter').querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click',function(){lgFilterCat=this.dataset.c;renderLedger();});
+  });
+  var show=(lgFilterCat==='全部')?rec:rec.filter(function(r){return r.e.cat===lgFilterCat;});
   var rh='';
-  rec.forEach(function(r){
+  show.forEach(function(r){
     var c=LEDGER_CATS.filter(function(x){return x.key===r.e.cat;})[0]||LEDGER_CATS[LEDGER_CATS.length-1];
     rh+='<div class="lg-recent-item">'
       +'<span class="dot" style="background:'+c.color+'"></span>'
@@ -1844,7 +1955,9 @@ function renderLedger(){
       +'<span class="x" data-i="'+r.idx+'">✕</span>'
       +'</div>';
   });
-  $('lgRecent').innerHTML=rh||'<div class="muted" style="margin-top:4px">记完会显示在这里，带名字方便回忆。</div>';
+  var totalShow=show.reduce(function(a,r){return a+(parseFloat(r.e.amount)||0);},0);
+  $('lgRecent').innerHTML=rh||'<div class="muted" style="margin-top:4px">'+(lgFilterCat==='全部'?'记完会显示在这里，带名字方便回忆。':'这个类目本月还没有记录。')+'</div>'
+    +(show.length?('<div class="muted" style="font-size:12px;margin-top:6px">本页共 '+show.length+' 笔 · 合计 ¥'+totalShow.toFixed(2)+'</div>'):'');
   $('lgRecent').querySelectorAll('.x').forEach(function(x){x.addEventListener('click',function(){
     var arr=getLedger(ledgerView); arr.splice(+x.dataset.i,1); lsSet(ledgerKeyOf(ledgerView||realMonthStr()),arr); renderLedger();
   });});
@@ -2048,7 +2161,7 @@ function localDiaryFeedback(text,mood){
 }
 /* 日记日期切换 */
 $('diaToday').addEventListener('click',function(){diaryDate=new Date();renderDiary();closeDiaPicker();});
-$('diaAdd').addEventListener('click',diaAddItem);
+$('diaNote').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();diaAddItem();}});
 $('diaText').addEventListener('input',diaSaveText);
 $('diaSaveBtn').addEventListener('click',function(){
   diaSaveText();
@@ -2265,7 +2378,11 @@ var DEFAULT_BLOCKS={
   ]
 };
 function blkTypeToday(){ return (new Date().getDay()===0)?'rest':'work'; }
-function getBlocks(){ var b=lsGet('adhd_blocks'); if(!b){ b=JSON.parse(JSON.stringify(DEFAULT_BLOCKS)); lsSet('adhd_blocks',b);} return b; }
+function getBlocks(){ /* 每日重置：按天存取，新的一天自动回到默认模板（旧全局 adhd_blocks 保留作存档，不再使用） */
+  var b=lsGet('adhd_blocks_'+tkey());
+  if(!b){ b=JSON.parse(JSON.stringify(DEFAULT_BLOCKS)); }
+  return b; }
+function saveBlocks(b){ lsSet('adhd_blocks_'+tkey(), b); }
 function getBlockDone(){ var m=lsGet('adhd_blockdone')||{}; if(!m[tkey()])m[tkey()]={}; return m; }
 function renderBlocks(){
   var b=getBlocks(), type=blkTypeToday(), list=b[type]||[];
@@ -2298,7 +2415,7 @@ $('blkSave').addEventListener('click',function(){
   var type=blkTypeToday(), lines=$('blkText').value.split('\n'), arr=[];
   lines.forEach(function(ln){ ln=ln.trim(); if(!ln)return; var sp=ln.indexOf(' '); if(sp<=0)return; var t=ln.slice(0,sp).trim(), tx=ln.slice(sp+1).trim(); if(!t||!tx)return; arr.push({t:t,tx:tx}); });
   if(!arr.length){ alert('至少写一条，格式：时间 内容'); return; }
-  var b=getBlocks(); b[type]=arr; lsSet('adhd_blocks',b);
+  var b=getBlocks(); b[type]=arr; saveBlocks(b);
   $('blkModal').classList.remove('on'); renderBlocks();
 });
 
@@ -2374,8 +2491,9 @@ function applyPlan(p){
   var arr=(p&&p.blocks||[]).filter(function(x){return x&&x.t&&x.tx;}).map(function(x){return {t:String(x.t).trim(),tx:String(x.tx).trim()};});
   if(!arr.length){alert('AI 没返回有效的时间表，换句话再试一次。');return false;}
   var type=blkTypeToday(), b=getBlocks();
-  if((b[type]||[]).length && !confirm('会覆盖当前时间表（周一到周六共用这一版），确定？'))return false;
-  b[type]=arr; lsSet('adhd_blocks',b);
+  var isDefault=!lsGet('adhd_blocks_'+tkey());
+  if(!isDefault && !confirm('会覆盖今天的时间表，确定？'))return false;
+  b[type]=arr; saveBlocks(b);
   var m=getBlockDone(), k=tkey();
   for(var key in m[k]){ if(key.indexOf(type+'|')===0)delete m[k][key]; }
   lsSet('adhd_blockdone',m);

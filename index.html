@@ -483,6 +483,60 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
 .spin-result{text-align:center;font-size:17px;font-weight:700;margin-top:6px;color:var(--ink);line-height:1.6;}
 .spin-result .tiny{display:block;font-size:12px;font-weight:400;color:var(--sub);margin-top:2px;}
 #spinList{text-align:center;font-size:12px;word-break:break-all;}
+
+/* ===== 顶部页内快速跳转条 ===== */
+.quickjump{display:flex;gap:6px;overflow-x:auto;padding:6px 2px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.quickjump::-webkit-scrollbar{display:none;}
+.quickjump button{flex:0 0 auto;border:1px solid var(--line);background:rgba(255,255,255,.34);color:var(--ink);font-size:12.5px;padding:6px 11px;border-radius:999px;cursor:pointer;min-height:34px;white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+.quickjump button:active{transform:scale(.94);}
+[data-theme="dark"] .quickjump button{background:rgba(255,255,255,.09);}
+
+/* ===== 折叠卡片（转盘 / 书架管理） ===== */
+.fold-card{padding:0;overflow:hidden;}
+.fold-sum{cursor:pointer;list-style:none;padding:16px;}
+.fold-sum::-webkit-details-marker{display:none;}
+.fold-sum h2{margin:0;cursor:pointer;}
+.fold-sum::after{content:'▾';margin-left:auto;color:var(--sub);font-size:14px;transition:transform .2s;}
+details[open]>.fold-sum::after{transform:rotate(180deg);}
+.fold-body{padding:0 16px 16px;}
+
+/* ===== 我的书架 ===== */
+.bookshelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;margin:6px 0 4px;}
+.shelf-book{position:relative;height:132px;border-radius:6px 9px 9px 6px;padding:12px 8px 8px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 5px 12px rgba(0,0,0,.14),inset 3px 0 0 rgba(255,255,255,.35);transition:transform .18s;overflow:hidden;}
+.shelf-book:hover{transform:translateY(-3px);}
+.shelf-book:active{transform:scale(.96);}
+.shelf-book .sb-name{font-size:13px;font-weight:700;line-height:1.35;word-break:break-all;text-shadow:0 1px 1px rgba(255,255,255,.5);}
+.shelf-book .sb-tag{font-size:11px;opacity:.82;line-height:1.3;}
+.shelf-book .sb-del{position:absolute;top:4px;right:6px;font-size:14px;opacity:.6;}
+.bookshelf-empty{color:var(--sub);font-size:13px;padding:10px 0;}
+
+/* ===== 课程进度折叠 ===== */
+.course-item{border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden;background:rgba(255,255,255,.16);}
+[data-theme="dark"] .course-item{background:rgba(255,255,255,.05);}
+.course-item summary{cursor:pointer;list-style:none;padding:11px 13px;display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);}
+.course-item summary::-webkit-details-marker{display:none;}
+.course-item summary::after{content:'▾';margin-left:auto;color:var(--sub);font-size:13px;transition:transform .2s;}
+.course-item[open] summary::after{transform:rotate(180deg);}
+.course-item .course-dot{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:0 0 auto;}
+.course-item .course-meta{font-size:11px;color:var(--sub);font-weight:400;}
+.course-item .course-body{padding:2px 13px 13px;}
+.course-del{border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;}
+
+/* ===== 作业 DDL 列表 ===== */
+.hw-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.2);margin-top:6px;}
+[data-theme="dark"] .hw-item{background:rgba(255,255,255,.06);}
+.hw-item.done{opacity:.5;}
+.hw-item .box{width:20px;height:20px;flex:0 0 auto;border:2px solid var(--line);border-radius:6px;cursor:pointer;text-align:center;line-height:17px;font-size:13px;color:var(--ok);}
+.hw-item.done .box{background:var(--ok);color:#fff;border-color:var(--ok);}
+.hw-item .hwtx{flex:1;font-size:14px;min-width:80px;}
+.hw-item.done .hwtx{text-decoration:line-through;}
+.hw-item .hwsub{font-size:11px;color:var(--sub);background:var(--line);border-radius:6px;padding:1px 6px;}
+.hw-badge{font-size:11px;padding:2px 7px;border-radius:8px;white-space:nowrap;font-weight:600;}
+.hw-badge.over{background:rgba(224,86,86,.16);color:#d64545;}
+.hw-badge.soon{background:rgba(232,163,61,.18);color:#c07d16;}
+.hw-badge.ok{background:rgba(87,201,138,.18);color:#2f9b62;}
+.hw-empty{color:var(--sub);font-size:13px;padding:8px 0;}
+.cal-cell .hdot{position:absolute;top:2px;right:2px;font-size:10px;line-height:1;z-index:2;}
 </style>
 </head>
 <body>
@@ -530,11 +584,23 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
       <button data-tab="cal">日历</button>
       <button data-tab="week">周末</button>
     </div>
+    <div class="quickjump" id="quickjump">
+      <button data-to="cardWeather" data-tab="today">🌤️天气</button>
+      <button data-to="cardBlocks" data-tab="today">🗓️排表</button>
+      <button data-to="cardHw" data-tab="study">📌作业</button>
+      <button data-to="cardTodo" data-tab="study">✅Todo</button>
+      <button data-to="cardCourse" data-tab="study">📐课程</button>
+      <button data-to="cardBooks" data-tab="life">📚书架</button>
+      <button data-to="cardLedger" data-tab="life">💰记账</button>
+      <button data-to="cardSpin" data-tab="life">🎡转盘</button>
+      <button data-to="cardCal" data-tab="cal">📅日历</button>
+      <button data-to="cardDiary" data-tab="cal">📝日记</button>
+    </div>
   </div>
 
   <!-- ============ 今日 ============ -->
   <div class="section on" id="tab-today">
-    <div class="card">
+    <div class="card" id="cardWeather">
       <h2>🌤️ 天气 <button class="btn sm ghost" id="wxLoc" style="margin:0 6px 0 4px">深圳南山</button> <button class="btn sm ghost" id="wRefresh" style="margin-left:auto">🔄 刷新</button></h2>
       <div id="wxLocBox" style="display:none;margin:6px 0 10px">
         <div class="row" style="margin-bottom:6px">
@@ -560,7 +626,7 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
 
 
 
-    <div class="card">
+    <div class="card" id="cardBlocks">
       <h2>🗓️ 今日时间块 <span class="hint" id="blkType">工作日</span> <button class="btn sm ghost" id="blkEdit" style="margin-left:auto">✎ 编辑</button></h2>
       <div id="planWrap" style="margin:0 0 10px;border:1px dashed var(--line);border-radius:12px;padding:10px">
         <div style="font-size:14px"><b>🪄 AI 帮我排今天</b> <span class="muted" style="font-size:12px">想到啥写啥，AI 排最优顺序</span></div>
@@ -648,20 +714,21 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
   <!-- ============ 学业 ============ -->
   <!-- ============ 学业 → 办公 ============ -->
   <div class="section" id="tab-study">
-    <div class="card">
-      <h2>📐 高数 / 专业课进度 <span class="hint">转专业命门</span></h2>
+    <div class="card" id="cardCourse">
+      <h2>📐 课程进度 <span class="hint">点课程名展开 · 转专业命门</span>
+        <button class="btn sm ghost" id="courseAddBtn" style="margin-left:auto">＋ 加课程</button></h2>
       <div class="banner warn">目标：大一上期末进专业前 30% 且零挂科 → 转国际经济与贸易。高数绝不挂。</div>
-      <label>宋浩网课看到第几集</label>
-      <input id="csEp" type="number" placeholder="例如 12">
-      <label>今天做题了吗（写了哪几题 / 错在哪）</label>
-      <textarea id="csEx" rows="2" placeholder="例：做了 P45 的 1-5 题，第 3 题卡住"></textarea>
-      <label>卡住的词 / 概念</label>
-      <input id="csStuck" placeholder="例：极限的 ε-δ 定义">
-      <button class="btn sm" id="csSave" style="margin-top:8px">保存进度</button>
-      <div id="csShow" class="muted" style="margin-top:8px"></div>
+      <div id="courseList"></div>
+      <div id="courseAddBox" style="display:none;margin-top:10px;border:1px dashed var(--line);border-radius:12px;padding:10px">
+        <div class="row">
+          <input id="courseNewName" placeholder="课程名，例：英语读写 / 微观经济学" style="flex:1">
+          <button class="btn sm" id="courseNewOk">加这门课</button>
+          <button class="btn sm ghost" id="courseNewCancel">取消</button>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardTodo">
       <h2>✅ Todo 清单 <span class="hint" id="todoProg">已完成 0 / 0</span></h2>
       <div class="prog"><i id="todoBar"></i></div>
       <input id="todoInput" placeholder="加一件事…">
@@ -673,12 +740,24 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardHw">
+      <h2>📌 作业 / DDL <span class="hint" id="hwCount">按截止日排 · 同步到日历</span></h2>
+      <div class="row" style="margin:6px 0">
+        <input id="hwName" placeholder="作业是什么…（例：高数 P60 习题）" style="flex:2;min-width:120px">
+        <input id="hwDue" type="date" style="flex:1;min-width:130px">
+        <select id="hwSub" style="width:auto;max-width:110px"></select>
+        <button class="btn sm" id="hwAdd">＋ 加作业</button>
+      </div>
+      <div id="hwList"></div>
+      <div class="muted" style="font-size:12px;margin-top:8px">标了截止日的作业，会在「日历」那天的格子上出现一个 📌 小标志，点那天能看到。</div>
+    </div>
+
+    <div class="card" id="cardLong">
       <h2>🗂️ 代办级 · 长期目标 <span class="hint">放一时做不完的事</span></h2>
       <div id="longList"></div>
     </div>
 
-    <div class="card">
+    <div class="card" style="display:none">
       <h2>✨ AI 拆分长期目标 <span class="hint">填好接口直接拆</span></h2>
       <label>长期目标（要达成什么）</label>
       <textarea id="ltTitle" rows="2" placeholder="例：三个月拿下转专业资格 / 这学期雅思 6.5"></textarea>
@@ -688,7 +767,7 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
       <button class="btn sm" id="ltAiSetBtn" style="margin:4px 0 8px">⚙️ 填 AI Key（只存本机）</button>
     </div>
 
-    <div class="card">
+    <div class="card" style="display:none">
       <h2>📋 短期任务 <span class="hint">今天就能做的小步</span></h2>
       <div class="row" style="margin:6px 0">
         <input id="shortInput" placeholder="加一件短期任务…" style="flex:1">
@@ -700,8 +779,10 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
 
   <!-- ============ 生活 ============ -->
   <div class="section" id="tab-life">
-    <div class="card">
-      <h2>🎡 纠结转盘 <span class="hint">AI 出题 or 自己填</span></h2>
+    <div class="card fold-card" id="cardSpin">
+      <details id="spinFold">
+        <summary class="fold-sum"><h2>🎡 纠结转盘 <span class="hint">点开转一转 · AI 出题 or 自己填</span></h2></summary>
+        <div class="fold-body">
       <label>今天纠结啥？（一句话就行）</label>
       <textarea id="spinInput" rows="2" placeholder="例：今天吃什么？／看哪部电影？／去哪玩？"></textarea>
       <div class="row" style="margin:6px 0">
@@ -719,11 +800,15 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
       <button class="btn" id="spinGo" style="width:100%">🎯 开始转！</button>
       <div class="spin-result" id="spinResult">先让 AI 出题，或自己填几个选项 👆</div>
       <div class="muted" id="spinList" style="margin-top:6px"></div>
+        </div>
+      </details>
     </div>
 
-    <div class="card">
-      <h2>📚 阅读追踪 <span class="hint">读完自动进下一本</span></h2>
-      <div id="readingNow"></div>
+    <div class="card" id="cardBooks">
+      <h2>📚 我的书架 <span class="hint">读过的书 · 点开看进度</span></h2>
+      <div id="bookshelf"></div>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">＋ 加书 / 管理（收起细节）</summary>
+      <div id="readingNow" style="margin-top:8px"></div>
       <label>加一本（默认进待读）</label>
       <div class="row">
         <input id="bookInput" placeholder="书名…" style="flex:1">
@@ -731,9 +816,10 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
       </div>
       <div id="readingTodo"></div>
       <div id="readingDone"></div>
+      </details>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardLedger">
       <h2>💰 记账 / 搞钱 <span class="hint">按月存档 · 可翻看往月</span></h2>
 
       <!-- 月份切换条：点「上个月 / 下个月」翻看任意月份 -->
@@ -821,7 +907,7 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
 
   <!-- ============ 日历 ============ -->
   <div class="section" id="tab-cal">
-    <div class="card">
+    <div class="card" id="cardCal">
       <h2>📅 整月日历 <span class="hint">点某天看特殊日程</span></h2>
       <div class="cal-head">
         <button class="btn sm ghost" id="calPrev">‹</button>
@@ -850,7 +936,7 @@ input[type=time]{padding:8px 10px;border-radius:10px;border:1px solid var(--line
       <div id="periList" class="muted" style="margin-top:10px"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardDiary">
       <h2>📝 每日日记 <span class="hint">心情 + 睡前小进步，自动按日期存档</span></h2>
       <div class="cal-head">
         <button class="btn sm" id="diaDateBtn"><span class="mo" id="diaDate"></span> ▾</button>
@@ -957,10 +1043,28 @@ function idbGetAll(){return idbOpen().then(function(db){return new Promise(funct
 function idbDel(id){return idbOpen().then(function(db){return new Promise(function(res){var tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(id);tx.oncomplete=function(){res();};});});}
 
 /* 标签页 */
-$('tabs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var t=b.dataset.tab;
-  document.querySelectorAll('.tabs button').forEach(function(x){x.classList.toggle('on',x===b);});
+function switchTab(t){
+  var tb=document.querySelector('.tabs button[data-tab="'+t+'"]');
+  document.querySelectorAll('.tabs button').forEach(function(x){x.classList.toggle('on',x===tb);});
   document.querySelectorAll('.section').forEach(function(s){s.classList.toggle('on',s.id==='tab-'+t);});
-});
+}
+$('tabs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;switchTab(b.dataset.tab);});
+/* 顶部快速跳转：先切到对应标签，再滚到卡片并高亮 */
+(function(){
+  var bar=$('quickjump'); if(!bar)return;
+  bar.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    var tab=b.dataset.tab, to=b.dataset.to;
+    if(tab)switchTab(tab);
+    var card=to?document.getElementById(to):null;
+    if(!card)return;
+    setTimeout(function(){
+      card.scrollIntoView({behavior:'smooth',block:'start'});
+      card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+      setTimeout(function(){card.classList.remove('flash');},1200);
+    },60);
+  });
+})();
 
 /* ============ 每日一句 ============ */
 var QUOTES=[
@@ -1338,16 +1442,133 @@ $('affTheme').addEventListener('change',renderAffirms);
 
 /* 睡前小进步已并入「日记区」（见下方 日记区 区块），此处不再单独实现 */
 
-/* ============ 高数 / 专业课 ============ */
-function renderCourse(){
-  var c=lsGet('adhd_course')||{};
-  $('csEp').value=c.ep||'';$('csEx').value=c.ex||'';$('csStuck').value=c.stuck||'';
-  $('csShow').innerHTML=c.updated?('上次保存：'+c.updated+'<br>集数 '+(c.ep||'-')+' ｜ 做题 '+(c.ex||'无')+' ｜ 卡 '+(c.stuck||'无')):'还没记。';
+/* ============ 课程进度（多课程·可折叠） ============ */
+/* 迁移：旧的 adhd_course 是单个对象（高数），并进新的 adhd_courses 数组，绝不丢 */
+(function(){
+  if(lsGet('adhd_courses_migrated'))return;
+  var arr=lsGet('adhd_courses');
+  if(!arr){
+    arr=[];
+    var old=lsGet('adhd_course');
+    if(old&&(old.ep||old.ex||old.stuck)){
+      arr.push({id:'c'+Date.now(),name:'微积分（高数）',ep:old.ep||'',ex:old.ex||'',stuck:old.stuck||'',updated:old.updated||''});
+    }
+    if(!arr.length)arr=[{id:'c1',name:'微积分（高数）',ep:'',ex:'',stuck:'',updated:''},{id:'c2',name:'英语读写',ep:'',ex:'',stuck:'',updated:''}];
+    lsSet('adhd_courses',arr);
+  }
+  lsSet('adhd_courses_migrated',1);
+})();
+function getCourses(){return lsGet('adhd_courses')||[];}
+function courseNameDefault(i){return ['微积分（高数）','英语读写','市场营销学','宏观经济学','微观经济学'][i]||'新课程';}
+function renderCourses(){
+  var arr=getCourses(); var el=$('courseList'); if(!el)return;
+  if(!arr.length){el.innerHTML='<div class="hw-empty">还没有课程，点右上「＋ 加课程」。</div>';return;}
+  var html='';
+  arr.forEach(function(c,i){
+    var has=(c.ep||c.ex||c.stuck);
+    var meta=has?('集数 '+(c.ep||'-')+' · '+(c.updated?c.updated:'')):'还没记进度';
+    html+='<details class="course-item" data-id="'+c.id+'">'
+      +'<summary><span class="course-dot" style="'+(has?'':'background:var(--line)')+'"></span>'
+      +'<span>'+esc(c.name)+'</span><span class="course-meta">'+esc(meta)+'</span>'
+      +'<button class="course-del" data-del="'+c.id+'" title="删掉这门课">✕</button></summary>'
+      +'<div class="course-body">'
+      +'<label>网课看到第几集</label><input class="cEp" type="number" placeholder="例如 12" value="'+esc(c.ep||'')+'">'
+      +'<label>今天做题了吗（写了哪几题 / 错在哪）</label><textarea class="cEx" rows="2" placeholder="例：做了 P45 的 1-5 题，第 3 题卡住">'+esc(c.ex||'')+'</textarea>'
+      +'<label>卡住的词 / 概念</label><input class="cStuck" placeholder="例：极限的 ε-δ 定义" value="'+esc(c.stuck||'')+'">'
+      +'<div class="row" style="margin-top:8px"><button class="btn sm cSave">保存进度</button>'
+      +'<span class="muted cShow" style="font-size:12px">'+(c.updated?('上次 '+esc(c.updated)):'')+'</span></div>'
+      +'</div></details>';
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('.course-item').forEach(function(det){
+    var id=det.dataset.id;
+    det.querySelector('.cSave').addEventListener('click',function(){
+      var arr=getCourses(); var c=arr.find(function(x){return x.id==id;}); if(!c)return;
+      c.ep=det.querySelector('.cEp').value.trim();
+      c.ex=det.querySelector('.cEx').value.trim();
+      c.stuck=det.querySelector('.cStuck').value.trim();
+      c.updated=tkey()+' '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+      lsSet('adhd_courses',arr); renderCourses();
+    });
+    det.querySelector('.course-del').addEventListener('click',function(e){
+      e.preventDefault(); e.stopPropagation();
+      if(!confirm('删掉这门课？进度也会一起删。'))return;
+      lsSet('adhd_courses',getCourses().filter(function(x){return x.id!=id;})); renderCourses();
+    });
+  });
 }
-$('csSave').addEventListener('click',function(){
-  lsSet('adhd_course',{ep:$('csEp').value,ex:$('csEx').value,stuck:$('csStuck').value,updated:tkey()+' '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
-  renderCourse();
-});
+(function(){
+  var addBtn=$('courseAddBtn'), box=$('courseAddBox'); if(!addBtn||!box)return;
+  addBtn.addEventListener('click',function(){box.style.display=(box.style.display==='none')?'block':'none';if(box.style.display==='block')$('courseNewName').focus();});
+  $('courseNewCancel').addEventListener('click',function(){box.style.display='none';});
+  $('courseNewOk').addEventListener('click',function(){
+    var v=$('courseNewName').value.trim(); if(!v)return;
+    var arr=getCourses(); arr.push({id:'c'+Date.now(),name:v,ep:'',ex:'',stuck:'',updated:''});
+    lsSet('adhd_courses',arr); $('courseNewName').value=''; box.style.display='none'; renderCourses();
+  });
+})();
+
+/* ============ 作业 / DDL ============ */
+var HW_SUBS=['高数','英语','专业课','公选课','其它'];
+function getHw(){return lsGet('adhd_hw')||[];}
+function hwDaysLeft(due){
+  if(!due)return null;
+  var now=new Date();now.setHours(0,0,0,0);
+  var d=new Date(due+'T00:00:00');
+  return Math.round((d-now)/86400000);
+}
+function fillHwSub(){
+  var s=$('hwSub'); if(!s||s.options.length)return;
+  HW_SUBS.forEach(function(x){var o=document.createElement('option');o.value=x;o.textContent=x;s.appendChild(o);});
+}
+function renderHw(){
+  fillHwSub();
+  var arr=getHw(); var el=$('hwList'); if(!el)return;
+  var open=arr.filter(function(x){return !x.done;});
+  open.sort(function(a,b){
+    if(!a.due)return 1; if(!b.due)return -1;
+    return a.due<b.due?-1:(a.due>b.due?1:0);
+  });
+  var cnt=$('hwCount'); if(cnt)cnt.textContent=open.length?('还有 '+open.length+' 项没交'):'按截止日排 · 同步到日历';
+  if(!arr.length){el.innerHTML='<div class="hw-empty">还没有作业。加一项，到点前会替你盯着。</div>';return;}
+  var html='';
+  arr.forEach(function(x){
+    var left=hwDaysLeft(x.due); var badge='';
+    if(x.due){
+      if(x.done)badge='<span class="hw-badge ok">已交</span>';
+      else if(left<0)badge='<span class="hw-badge over">逾期 '+(-left)+' 天</span>';
+      else if(left===0)badge='<span class="hw-badge over">今天交</span>';
+      else if(left<=2)badge='<span class="hw-badge soon">还剩 '+left+' 天</span>';
+      else badge='<span class="hw-badge ok">还剩 '+left+' 天</span>';
+    }
+    html+='<div class="hw-item'+(x.done?' done':'')+'">'
+      +'<div class="box" data-box="'+x.id+'">'+(x.done?'✓':'')+'</div>'
+      +'<div class="hwtx">'+esc(x.t)+'</div>'
+      +(x.sub?'<span class="hwsub">'+esc(x.sub)+'</span>':'')
+      +(x.due?'<span class="hwsub">'+esc(x.due.slice(5))+'</span>':'')
+      +badge
+      +'<button class="course-del" data-hwdel="'+x.id+'">✕</button>'
+      +'</div>';
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('[data-box]').forEach(function(b){
+    b.addEventListener('click',function(){var a=getHw();var h=a.find(function(y){return y.id==b.dataset.box;});if(h){h.done=!h.done;lsSet('adhd_hw',a);renderHw();renderCal();}});
+  });
+  el.querySelectorAll('[data-hwdel]').forEach(function(b){
+    b.addEventListener('click',function(){lsSet('adhd_hw',getHw().filter(function(y){return y.id!=b.dataset.hwdel;}));renderHw();renderCal();});
+  });
+}
+(function(){
+  var add=$('hwAdd'); if(!add)return;
+  add.addEventListener('click',function(){
+    var t=$('hwName').value.trim(); if(!t)return;
+    var a=getHw();
+    a.push({id:'h'+Date.now(),t:t,due:$('hwDue').value||'',sub:$('hwSub').value||'',done:false});
+    lsSet('adhd_hw',a); $('hwName').value=''; $('hwDue').value='';
+    renderHw(); renderCal();
+  });
+  $('hwName').addEventListener('keydown',function(e){if(e.key==='Enter')add.click();});
+})();
 
 /* ============ Todo ============ */
 function getTodos(){return lsGet('adhd_todo_'+tkey())||[];}
@@ -1423,6 +1644,39 @@ function renderBooks(){
   done.forEach(function(x){h+=bookRow(x,b.indexOf(x));});
   $('readingNow').innerHTML=h;
   bindBookBtns();
+  renderBookshelf();
+}
+/* 书架视觉：书脊并排，颜色由书名稳定散列决定，点一下切状态 */
+function shelfColor(title){
+  var palettes=[['#F6C8C0','#8a4b43'],['#C9E2D2','#345b46'],['#CAD9EE','#3a5172'],['#F2DCA8','#7a5c22'],['#DBCEEC','#5b4780'],['#F3CDE0','#7d4260'],['#BFE3E0','#2f6662']];
+  var n=0;for(var i=0;i<title.length;i++)n=(n*31+title.charCodeAt(i))%997;
+  return palettes[n%palettes.length];
+}
+function renderBookshelf(){
+  var el=$('bookshelf'); if(!el)return;
+  var b=getBooks();
+  if(!b.length){el.innerHTML='<div class="bookshelf-empty">书架还空着，点下面「＋ 加书 / 管理」放第一本。</div>';return;}
+  var tagMap={todo:'想读',reading:'在读',done:'读完'};
+  var html='';
+  b.forEach(function(x,idx){
+    var c=shelfColor(x.title||'');
+    var prog=(x.status==='reading'&&x.total)?(' '+Math.round((x.cur||0)/x.total*100)+'%'):'';
+    html+='<div class="shelf-book" data-shelf="'+idx+'" style="background:'+c[0]+';color:'+c[1]+'">'
+      +'<div class="sb-name">'+esc(x.title)+'</div>'
+      +'<div class="sb-tag">'+(tagMap[x.status]||'想读')+prog+' · 点一下换状态</div>'
+      +'</div>';
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('[data-shelf]').forEach(function(sb){
+    sb.addEventListener('click',function(){
+      var bks=getBooks(); var i=+sb.dataset.shelf; var x=bks[i]; if(!x)return;
+      var order=['todo','reading','done'];
+      var cur=order.indexOf(x.status); if(cur<0)cur=0;
+      x.status=order[(cur+1)%3];
+      if(x.status==='reading'){bks.forEach(function(y,j){if(j!==i&&y.status==='reading')y.status='done';});}
+      lsSet('adhd_books',bks); renderBooks();
+    });
+  });
 }
 function bookRow(x,idx){
   if(x.status==='reading'){
@@ -1890,9 +2144,10 @@ function renderCal(){
     var dt=new Date(calY,calM,d);var key=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var cal=getCal();var has=cal[key]&&cal[key].length;
     var peri=isPeriod(dt);
+    var hwHere=getHw().filter(function(h){return h.due===key&&!h.done;});
     var bar=(has&&cal[key])?'<div class="catbar">'+cal[key].map(function(e){return '<span class="seg" style="background:'+catColor(e.cat)+'"></span>';}).join('')+'</div>':'';
     html+='<div class="cal-cell'+(key===tk?' today':'')+(peri?' peri':'')+'" data-d="'+key+'">'
-      +'<div>'+d+'</div>'+bar+(peri?'<span class="pdot"></span>':'')+'</div>';
+      +'<div>'+d+'</div>'+bar+(peri?'<span class="pdot"></span>':'')+(hwHere.length?'<span class="hdot" title="'+hwHere.length+' 项作业截止">📌</span>':'')+'</div>';
   }
   $('calGrid').innerHTML=html;
   $('calGrid').querySelectorAll('.cal-cell[data-d]').forEach(function(c){
@@ -1903,7 +2158,11 @@ function openDay(key){
   $('dayTitle').textContent=key+' 的特殊日程';
   fillEvCat();
   var cal=getCal();cal[key]=cal[key]||[];
-  function fill(){var html='';cal[key].forEach(function(e,i){var c=e.cat||'other';html+='<div class="evt"><span class="ti">'+esc(e.t)+'</span><span class="evcat" style="background:'+catColor(c)+'">'+catName(c)+'</span><span class="tx">'+esc(e.x)+'</span><span class="x" data-i="'+i+'">✕</span></div>';});$('dayEvents').innerHTML=html||'<div class="muted">这天还没有特殊日程。</div>';
+  function fill(){var html='';
+    var hw=getHw().filter(function(h){return h.due===key;});
+    hw.forEach(function(h){html+='<div class="evt"><span class="evcat" style="background:#e8a35d">📌作业'+(h.done?'·已交':'')+'</span><span class="ti">'+esc(h.t)+'</span>'+(h.sub?'<span class="tx">'+esc(h.sub)+'</span>':'')+'</div>';});
+    cal[key].forEach(function(e,i){var c=e.cat||'other';html+='<div class="evt"><span class="ti">'+esc(e.t)+'</span><span class="evcat" style="background:'+catColor(c)+'">'+catName(c)+'</span><span class="tx">'+esc(e.x)+'</span><span class="x" data-i="'+i+'">✕</span></div>';});
+    $('dayEvents').innerHTML=html||'<div class="muted">这天还没有特殊日程。</div>';
     $('dayEvents').querySelectorAll('.x').forEach(function(x){x.addEventListener('click',function(){cal[key].splice(+x.dataset.i,1);lsSet('adhd_cal_'+calY+'-'+String(calM+1).padStart(2,'0'),cal);fill();renderCal();});});
   }
   fill();
@@ -2568,7 +2827,7 @@ $('spinGo').addEventListener('click',function(){
 /* ============ 初始化（放在末尾：所有数据常量与函数均已就绪） ============ */
 loadWx();renderPeri();renderHabits();renderAffirms();renderDiary();
 (function(){var el=document.getElementById('wxLoc');if(el)el.textContent=WX.loc;})();
-renderCourse();renderTodos();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderLedgerMonthBar();renderIdeas();
+renderCourses();renderHw();renderTodos();renderFit();renderBooks();renderLedgerCats();migrateOldLedger();renderLedger();renderLedgerMonthBar();renderIdeas();
 renderCal();fillEvCat();renderWeek();renderBlocks();renderPack();renderCatch();renderReminders();checkReminders();setInterval(checkReminders,20000);
 var pcb=$('planCoachBtn'); if(pcb){pcb.addEventListener('click',function(){var u=pcb.dataset.pc; if(u&&u.indexOf('__')!==0&&u.trim()){window.open(u,'_blank');}else{alert('这个按钮还没填 PlanCoach 的打开链接，跟妮妮说一声就给你填上。');}});}
 applyWallpaper();loadAICfg();renderLong();renderShort();renderWeeklyReview();
